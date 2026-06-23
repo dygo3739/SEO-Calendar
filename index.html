@@ -5,425 +5,197 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Content Calendar</title>
 <style>
-  :root {
-    --bg: #f7f7f5;
-    --surface: #ffffff;
-    --border: #e4e4e0;
-    --border-strong: #c8c8c2;
-    --text: #1a1a18;
-    --text-2: #5a5a54;
-    --text-3: #9a9a92;
-    --accent: #2563eb;
-    --accent-bg: #eff6ff;
-    --accent-text: #1d4ed8;
-    --green-bg: #f0fdf4;
-    --green-text: #15803d;
-    --amber-bg: #fffbeb;
-    --amber-text: #92400e;
-    --red-bg: #fef2f2;
-    --red-text: #991b1b;
-    --gray-bg: #f4f4f2;
-    --radius: 8px;
-    --radius-lg: 12px;
-    --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-mono: 'JetBrains Mono', 'Fira Mono', monospace;
-    --sidebar-w: 248px;
-  }
+:root{
+  --bg:#f7f7f5;--surface:#fff;--border:#e4e4e0;--bstrong:#c8c8c2;
+  --text:#1a1a18;--t2:#5a5a54;--t3:#9a9a92;
+  --accent:#2563eb;--abg:#eff6ff;--atx:#1d4ed8;
+  --gbg:#f0fdf4;--gtx:#15803d;
+  --ybg:#fffbeb;--ytx:#92400e;
+  --rbg:#fef2f2;--rtx:#991b1b;
+  --gray:#f4f4f2;
+  --r:8px;--rl:12px;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  --mono:'JetBrains Mono','Fira Mono',monospace;
+  --sw:252px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+.shell{display:grid;grid-template-columns:var(--sw) 1fr;grid-template-rows:auto 1fr;min-height:100vh}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+/* topbar */
+.tb{grid-column:1/-1;background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:52px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50}
+.logo{font-size:15px;font-weight:600;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.tb-sp{flex:1}
+.tb-act{display:flex;gap:7px;align-items:center}
 
-  body {
-    font-family: var(--font);
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    font-size: 14px;
-    line-height: 1.5;
-  }
+/* sidebar */
+.sb{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;padding-bottom:24px}
+.sbs{padding:14px 14px 0}
+.sbs+.sbs{padding-top:10px}
+.slbl{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t3);margin-bottom:6px}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.scard{background:var(--gray);border-radius:var(--r);padding:9px 11px}
+.sval{font-size:19px;font-weight:600;line-height:1;color:var(--text)}
+.slb{font-size:10px;color:var(--t3);margin-top:2px}
+.scard.danger .sval{color:#dc2626}
+.site-list{display:flex;flex-direction:column;gap:2px}
+.site-row{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:var(--r);cursor:pointer;user-select:none;border:1px solid transparent;transition:background .1s}
+.site-row:hover{background:var(--gray)}
+.site-row.active{background:var(--abg);border-color:#bfdbfe}
+.sdot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sinfo{flex:1;min-width:0}
+.sname{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.snext{font-size:10px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.scnt{font-size:10px;color:var(--t3);flex-shrink:0}
+.add-site-btn{margin:7px 14px 0;padding:7px 0;border:1px dashed var(--bstrong);border-radius:var(--r);background:none;cursor:pointer;font-size:12px;color:var(--t3);width:calc(100% - 28px);display:flex;align-items:center;justify-content:center;gap:5px;transition:background .1s,color .1s;font-family:var(--font)}
+.add-site-btn:hover{background:var(--gray);color:var(--t2)}
+.tlist{display:flex;flex-direction:column;gap:5px}
+.trow{display:flex;align-items:center;gap:7px}
+.tname{font-size:11px;color:var(--t2);min-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ttime{font-size:10px;color:var(--t3);min-width:36px}
+.tbar{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.tfill{height:100%;border-radius:2px}
+.warn-pill{display:flex;align-items:center;gap:6px;font-size:11px;padding:6px 9px;background:var(--ybg);color:var(--ytx);border-radius:var(--r);margin-top:6px}
+.setup-banner{background:var(--ybg);border:1px solid #fde68a;border-radius:var(--r);padding:9px 12px;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ytx);margin:10px 14px 0}
 
-  /* ── Layout ── */
-  .shell {
-    display: grid;
-    grid-template-columns: var(--sidebar-w) 1fr;
-    grid-template-rows: auto 1fr;
-    min-height: 100vh;
-  }
+/* main */
+.main{display:flex;flex-direction:column;overflow:hidden}
+.main-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:9px 18px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.mnav{display:flex;align-items:center;gap:5px}
+.mnav button{padding:4px 8px;border:1px solid var(--border);border-radius:var(--r);background:none;cursor:pointer;color:var(--t2);font-size:14px;line-height:1}
+.mnav button:hover{background:var(--gray)}
+.mlbl{font-size:14px;font-weight:600;min-width:136px;text-align:center}
+.vtabs{display:flex;border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.vtab{padding:5px 13px;font-size:12px;cursor:pointer;background:none;border:none;color:var(--t3);font-family:var(--font)}
+.vtab:not(:last-child){border-right:1px solid var(--border)}
+.vtab.on{background:var(--text);color:#fff;font-weight:500}
+.mla{margin-left:auto;display:flex;gap:7px}
 
-  /* ── Top bar ── */
-  .topbar {
-    grid-column: 1 / -1;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 0 20px;
-    height: 52px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    position: sticky;
-    top: 0;
-    z-index: 50;
-  }
-  .topbar-logo {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text);
-    letter-spacing: -.02em;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .topbar-logo-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--accent);
-  }
-  .topbar-spacer { flex: 1; }
-  .topbar-actions { display: flex; gap: 8px; align-items: center; }
+/* buttons */
+.btn{padding:6px 13px;border-radius:var(--r);font-size:12px;font-family:var(--font);cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-weight:500;transition:background .1s,opacity .1s;line-height:1.4}
+.btn-p{background:var(--accent);color:#fff;border:none}
+.btn-p:hover{background:#1d4ed8}
+.btn-g{background:none;border:1px solid var(--bstrong);color:var(--t2)}
+.btn-g:hover{background:var(--gray)}
+.btn-d{background:none;border:1px solid #fca5a5;color:#dc2626}
+.btn-d:hover{background:var(--rbg)}
+.btn-gn{background:#16a34a;color:#fff;border:none}
+.btn-gn:hover{background:#15803d}
+.btn:disabled{opacity:.4;cursor:not-allowed}
 
-  /* ── Sidebar ── */
-  .sidebar {
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    padding-bottom: 20px;
-  }
-  .sidebar-section { padding: 16px 16px 0; }
-  .sidebar-section + .sidebar-section { padding-top: 12px; }
-  .section-label {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--text-3);
-    margin-bottom: 6px;
-  }
-  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  .stat-card {
-    background: var(--gray-bg);
-    border-radius: var(--radius);
-    padding: 10px 12px;
-  }
-  .stat-val { font-size: 20px; font-weight: 600; line-height: 1; color: var(--text); }
-  .stat-lbl { font-size: 10px; color: var(--text-3); margin-top: 3px; }
-  .stat-card.danger .stat-val { color: #dc2626; }
+/* calendar */
+.cal-wrap{padding:12px 14px;flex:1;overflow-y:auto}
+.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cdow{font-size:10px;font-weight:600;text-align:center;color:var(--t3);padding:3px 0;text-transform:uppercase;letter-spacing:.05em}
+.ccell{min-height:76px;border:1px solid var(--border);border-radius:var(--r);padding:5px 6px;cursor:pointer;background:var(--surface);transition:border-color .12s}
+.ccell:hover{border-color:var(--bstrong)}
+.ccell.today{border-color:var(--accent)}
+.ccell.dim{background:var(--gray);opacity:.45;cursor:default}
+.cdn{font-size:10px;color:var(--t3);margin-bottom:3px;display:flex;align-items:center}
+.today .cdn span{background:var(--accent);color:#fff;border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600}
+.cpill{font-size:9px;padding:2px 5px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;line-height:1.35}
+.cmore{font-size:9px;color:var(--t3)}
 
-  /* Site list */
-  .site-list { display: flex; flex-direction: column; gap: 2px; }
-  .site-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border-radius: var(--radius);
-    cursor: pointer;
-    user-select: none;
-    border: 1px solid transparent;
-    transition: background .1s;
-  }
-  .site-row:hover { background: var(--gray-bg); }
-  .site-row.active { background: var(--accent-bg); border-color: #bfdbfe; }
-  .site-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-  .site-info { flex: 1; min-width: 0; }
-  .site-name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .site-next { font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
-  .site-badge { font-size: 10px; color: var(--text-3); flex-shrink: 0; }
+/* list */
+.list-wrap{padding:12px 14px;flex:1;overflow-y:auto}
+.lhdr{display:grid;grid-template-columns:86px 1fr 1fr 82px 72px 90px;gap:8px;padding:5px 11px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);background:var(--gray);border-radius:var(--r);margin-bottom:5px}
+.lrow{display:grid;grid-template-columns:86px 1fr 1fr 82px 72px 90px;gap:8px;align-items:start;padding:9px 11px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);margin-bottom:3px;transition:border-color .1s}
+.lrow:hover{border-color:var(--bstrong)}
+.ld{font-size:11px;color:var(--t2)}
+.lt2{font-size:10px;color:var(--t3)}
+/* title cell — shown after publish */
+.l-title{font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-top:1px}
+.l-title-pending{font-size:11px;font-style:italic;color:var(--t3);padding-top:2px}
+/* topic cell — always shown */
+.l-topic{font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-top:2px}
+.lsite{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--t2);overflow:hidden}
+.lsn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lact{display:flex;gap:3px;justify-content:flex-end;align-items:center}
 
-  /* Timing bars */
-  .timing-list { display: flex; flex-direction: column; gap: 6px; }
-  .timing-row { display: flex; align-items: center; gap: 8px; }
-  .timing-name { font-size: 11px; color: var(--text-2); min-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .timing-time { font-size: 10px; color: var(--text-3); min-width: 38px; }
-  .timing-bar { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
-  .timing-fill { height: 100%; border-radius: 2px; }
+/* badges */
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px}
+.b-sch{background:var(--abg);color:var(--atx)}
+.b-pub{background:var(--gbg);color:var(--gtx)}
+.b-dra{background:var(--gray);color:var(--t3)}
+.b-fai{background:var(--rbg);color:var(--rtx)}
+.b-run{background:var(--ybg);color:var(--ytx)}
 
-  .warn-pill {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 11px; padding: 6px 10px;
-    background: var(--amber-bg); color: var(--amber-text);
-    border-radius: var(--radius); margin-top: 6px;
-  }
-  .add-site-btn {
-    margin: 8px 16px 0;
-    padding: 7px 0;
-    border: 1px dashed var(--border-strong);
-    border-radius: var(--radius);
-    background: none;
-    cursor: pointer;
-    font-size: 12px;
-    color: var(--text-3);
-    width: calc(100% - 32px);
-    display: flex; align-items: center; justify-content: center; gap: 5px;
-    transition: background .1s, color .1s;
-  }
-  .add-site-btn:hover { background: var(--gray-bg); color: var(--text-2); }
+/* modals */
+.mbd{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding-top:56px;z-index:200}
+.modal{background:var(--surface);border-radius:var(--rl);border:1px solid var(--border);width:520px;max-width:calc(100vw - 32px);max-height:calc(100vh - 90px);overflow-y:auto;padding:22px}
+.modal.wide{width:580px}
+.mtitle{font-size:16px;font-weight:600;margin-bottom:14px}
+.mtabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:14px}
+.mtab{font-size:12px;font-weight:500;padding:6px 14px;cursor:pointer;color:var(--t3);border-bottom:2px solid transparent;margin-bottom:-1px;background:none;border-top:none;border-left:none;border-right:none;font-family:var(--font)}
+.mtab.on{color:var(--text);border-bottom-color:var(--accent)}
+.mact{display:flex;gap:7px;justify-content:flex-end;margin-top:18px}
 
-  /* ── Main content ── */
-  .main {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .main-bar {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 10px 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  .month-nav { display: flex; align-items: center; gap: 6px; }
-  .month-nav button {
-    padding: 4px 8px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: none;
-    cursor: pointer;
-    color: var(--text-2);
-    font-size: 14px;
-    line-height: 1;
-  }
-  .month-nav button:hover { background: var(--gray-bg); }
-  .month-label { font-size: 14px; font-weight: 600; min-width: 138px; text-align: center; }
-  .view-tabs { display: flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .view-tab {
-    padding: 5px 14px; font-size: 12px; cursor: pointer;
-    background: none; border: none; color: var(--text-3);
-    font-family: var(--font);
-  }
-  .view-tab:not(:last-child) { border-right: 1px solid var(--border); }
-  .view-tab.on { background: var(--text); color: #fff; font-weight: 500; }
-  .ml-auto { margin-left: auto; }
+/* fields */
+.field{margin-bottom:11px}
+.field label{display:block;font-size:11px;font-weight:500;color:var(--t2);margin-bottom:3px}
+.field input,.field select,.field textarea{width:100%;padding:7px 10px;border:1px solid var(--bstrong);border-radius:var(--r);background:var(--surface);color:var(--text);font-size:13px;font-family:var(--font);transition:border-color .15s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.field textarea{resize:vertical;min-height:86px;line-height:1.55}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fhint{font-size:11px;color:var(--t3);margin-top:3px}
+.mono{font-family:var(--mono)!important;font-size:12px!important;letter-spacing:.03em}
 
-  /* ── Buttons ── */
-  .btn {
-    padding: 6px 14px; border-radius: var(--radius);
-    font-size: 12px; font-family: var(--font);
-    cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
-    font-weight: 500; transition: background .1s, opacity .1s;
-  }
-  .btn-primary { background: var(--accent); color: #fff; border: none; }
-  .btn-primary:hover { background: #1d4ed8; }
-  .btn-ghost { background: none; border: 1px solid var(--border-strong); color: var(--text-2); }
-  .btn-ghost:hover { background: var(--gray-bg); }
-  .btn-danger { background: none; border: 1px solid #fca5a5; color: #dc2626; }
-  .btn-danger:hover { background: var(--red-bg); }
-  .btn:disabled { opacity: .4; cursor: not-allowed; }
+/* connection test */
+.conn-row{display:flex;align-items:center;gap:8px;padding:8px 11px;border-radius:var(--r);border:1px solid var(--border);background:var(--gray);margin-bottom:10px;font-size:12px}
 
-  /* ── Calendar ── */
-  .cal-wrap { padding: 14px 16px; flex: 1; overflow-y: auto; }
-  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-  .cal-dow { font-size: 10px; font-weight: 600; text-align: center; color: var(--text-3); padding: 4px 0; text-transform: uppercase; letter-spacing: .05em; }
-  .cal-cell {
-    min-height: 78px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 5px 6px;
-    cursor: pointer;
-    background: var(--surface);
-    transition: border-color .12s;
-  }
-  .cal-cell:hover { border-color: var(--border-strong); }
-  .cal-cell.today { border-color: var(--accent); }
-  .cal-cell.other-month { background: var(--gray-bg); opacity: .5; cursor: default; }
-  .cal-day-num {
-    font-size: 11px; color: var(--text-3); margin-bottom: 4px;
-    display: flex; align-items: center; justify-content: flex-start;
-  }
-  .today .cal-day-num span {
-    background: var(--accent); color: #fff;
-    border-radius: 50%; width: 18px; height: 18px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 600;
-  }
-  .cal-pill {
-    font-size: 9px; padding: 2px 5px; border-radius: 4px;
-    margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    font-weight: 500; line-height: 1.35;
-  }
-  .cal-more { font-size: 9px; color: var(--text-3); }
+/* queue preview */
+.qprev{border:1px solid var(--border);border-radius:var(--r);max-height:120px;overflow-y:auto;background:var(--gray);padding:7px 9px}
+.qrow{display:flex;gap:8px;padding:2px 0;border-bottom:1px solid var(--border);font-size:11px}
+.qrow:last-child{border-bottom:none}
+.qdate{color:var(--t3);min-width:50px;flex-shrink:0}
 
-  /* ── List view ── */
-  .list-wrap { padding: 14px 16px; flex: 1; overflow-y: auto; }
-  .list-header {
-    display: grid; grid-template-columns: 96px 1fr 96px 80px 80px;
-    gap: 10px; padding: 6px 12px;
-    font-size: 10px; font-weight: 600; text-transform: uppercase;
-    letter-spacing: .06em; color: var(--text-3);
-    background: var(--gray-bg); border-radius: var(--radius);
-    margin-bottom: 6px;
-  }
-  .list-row {
-    display: grid; grid-template-columns: 96px 1fr 96px 80px 80px;
-    gap: 10px; align-items: center;
-    padding: 9px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface);
-    margin-bottom: 4px;
-    transition: border-color .1s;
-  }
-  .list-row:hover { border-color: var(--border-strong); }
-  .list-date { font-size: 12px; color: var(--text-2); }
-  .list-time { font-size: 10px; color: var(--text-3); }
-  .list-topic { font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .list-site { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-2); overflow: hidden; }
-  .list-site-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .list-actions { display: flex; gap: 4px; justify-content: flex-end; }
+/* log */
+.logp{border:1px solid var(--border);border-radius:var(--r);background:#0f172a;padding:10px 12px;max-height:200px;overflow-y:auto;font-family:var(--mono);font-size:11px;line-height:1.7}
+.ll{display:flex;gap:9px}
+.lts{color:#64748b;flex-shrink:0}
+.li{color:#94a3b8}.lok{color:#4ade80}.le{color:#f87171}.lw{color:#fbbf24}
 
-  /* Status badges */
-  .badge {
-    display: inline-block; font-size: 10px; font-weight: 600;
-    padding: 2px 8px; border-radius: 20px;
-  }
-  .badge-scheduled { background: var(--accent-bg); color: var(--accent-text); }
-  .badge-published { background: var(--green-bg); color: var(--green-text); }
-  .badge-draft { background: var(--gray-bg); color: var(--text-3); }
-  .badge-failed { background: var(--red-bg); color: var(--red-text); }
-  .badge-running { background: var(--amber-bg); color: var(--amber-text); }
+/* progress */
+.pbar{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin:7px 0}
+.pfill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s}
 
-  /* ── Modals ── */
-  .modal-backdrop {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,.45);
-    display: flex; align-items: flex-start; justify-content: center;
-    padding-top: 60px; z-index: 200;
-  }
-  .modal {
-    background: var(--surface);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border);
-    width: 500px; max-width: calc(100vw - 40px);
-    max-height: calc(100vh - 100px);
-    overflow-y: auto;
-    padding: 24px;
-  }
-  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
-  .modal-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
-  .modal-tab {
-    font-size: 12px; font-weight: 500; padding: 7px 16px;
-    cursor: pointer; color: var(--text-3);
-    border-bottom: 2px solid transparent; margin-bottom: -1px;
-    background: none; border-top: none; border-left: none; border-right: none;
-    font-family: var(--font);
-  }
-  .modal-tab.on { color: var(--text); border-bottom-color: var(--accent); }
-  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+/* toast */
+.toast-wrap{position:fixed;bottom:22px;right:22px;display:flex;flex-direction:column;gap:7px;z-index:500}
+.toast{padding:9px 15px;border-radius:var(--r);font-size:13px;font-weight:500;display:flex;align-items:center;gap:7px;animation:si .2s ease;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.t-ok{background:var(--gbg);color:var(--gtx);border:1px solid #bbf7d0}
+.t-err{background:var(--rbg);color:var(--rtx);border:1px solid #fecaca}
+.t-info{background:var(--abg);color:var(--atx);border:1px solid #bfdbfe}
+@keyframes si{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}
 
-  /* Form fields */
-  .field { margin-bottom: 12px; }
-  .field label { display: block; font-size: 11px; font-weight: 500; color: var(--text-2); margin-bottom: 4px; }
-  .field input, .field select, .field textarea {
-    width: 100%; padding: 7px 10px;
-    border: 1px solid var(--border-strong); border-radius: var(--radius);
-    background: var(--surface); color: var(--text);
-    font-size: 13px; font-family: var(--font);
-    transition: border-color .15s;
-  }
-  .field input:focus, .field select:focus, .field textarea:focus {
-    outline: none; border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(37,99,235,.1);
-  }
-  .field textarea { resize: vertical; min-height: 88px; line-height: 1.55; }
-  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .field-hint { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+.day-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)}
+.day-row:last-child{border-bottom:none}
+.empty-state{text-align:center;padding:48px 20px;color:var(--t3)}
 
-  /* Queue preview */
-  .queue-preview {
-    border: 1px solid var(--border); border-radius: var(--radius);
-    max-height: 140px; overflow-y: auto;
-    background: var(--gray-bg); padding: 8px 10px;
-  }
-  .qrow { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--border); font-size: 11px; }
-  .qrow:last-child { border-bottom: none; }
-  .qdate { color: var(--text-3); min-width: 52px; flex-shrink: 0; }
-  .qtopic { color: var(--text); }
+/* push topic picker */
+.ptopic-row{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:5px;cursor:pointer;transition:border-color .1s}
+.ptopic-row:hover{border-color:var(--accent)}
+.ptopic-row.sel{border-color:var(--accent);background:var(--abg)}
+.pradio{width:13px;height:13px;border-radius:50%;border:2px solid var(--bstrong);flex-shrink:0}
+.ptopic-row.sel .pradio{border-color:var(--accent);background:var(--accent)}
 
-  /* Log panel */
-  .log-panel {
-    border: 1px solid var(--border); border-radius: var(--radius);
-    background: #0f172a; padding: 12px 14px;
-    max-height: 220px; overflow-y: auto;
-    font-family: var(--font-mono); font-size: 11px; line-height: 1.7;
-  }
-  .log-line { display: flex; gap: 10px; }
-  .log-time { color: #64748b; flex-shrink: 0; }
-  .log-info { color: #94a3b8; }
-  .log-ok { color: #4ade80; }
-  .log-err { color: #f87171; }
-  .log-warn { color: #fbbf24; }
-
-  /* Toast */
-  .toast-wrap {
-    position: fixed; bottom: 24px; right: 24px;
-    display: flex; flex-direction: column; gap: 8px; z-index: 500;
-  }
-  .toast {
-    padding: 10px 16px; border-radius: var(--radius);
-    font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px;
-    animation: slide-in .2s ease;
-    box-shadow: 0 4px 12px rgba(0,0,0,.12);
-  }
-  .toast-ok { background: var(--green-bg); color: var(--green-text); border: 1px solid #bbf7d0; }
-  .toast-err { background: var(--red-bg); color: var(--red-text); border: 1px solid #fecaca; }
-  .toast-info { background: var(--accent-bg); color: var(--accent-text); border: 1px solid #bfdbfe; }
-  @keyframes slide-in { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
-  /* API key setup */
-  .setup-banner {
-    background: var(--amber-bg);
-    border: 1px solid #fde68a;
-    border-radius: var(--radius);
-    padding: 10px 14px;
-    display: flex; align-items: center; gap: 10px;
-    font-size: 12px; color: var(--amber-text);
-    margin: 12px 16px 0;
-  }
-
-  /* Progress bar */
-  .progress-bar {
-    height: 3px; background: var(--border); border-radius: 2px; overflow: hidden;
-    margin: 8px 0;
-  }
-  .progress-fill {
-    height: 100%; background: var(--accent); border-radius: 2px;
-    transition: width .3s ease;
-  }
-
-  /* Day modal posts */
-  .day-post-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 0; border-bottom: 1px solid var(--border);
-  }
-  .day-post-row:last-child { border-bottom: none; }
-
-  .empty-state {
-    text-align: center; padding: 48px 20px; color: var(--text-3);
-  }
-  .empty-state svg { margin-bottom: 12px; opacity: .35; }
-
-  /* Monospace API key display */
-  .api-key-input { font-family: var(--font-mono) !important; font-size: 12px !important; letter-spacing: .03em; }
+/* pillar pages */
+.pillar-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:5px;background:var(--surface)}
 </style>
 </head>
 <body>
-
 <div class="shell" id="app"></div>
 <div class="toast-wrap" id="toasts"></div>
-
 <script>
-// ═══════════════════════════════════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════════════════════════════════
-const COLORS = ['#2563eb','#059669','#dc2626','#9333ea','#ea580c','#0891b2'];
-const PILL_BG = ['#eff6ff','#f0fdf4','#fef2f2','#faf5ff','#fff7ed','#ecfeff'];
-const PILL_TX = ['#1d4ed8','#15803d','#991b1b','#7e22ce','#c2410c','#0e7490'];
+// ─── CONSTANTS ───────────────────────────────────────────────────────
+const COLORS=['#2563eb','#059669','#dc2626','#9333ea','#ea580c','#0891b2'];
+const PBG=['#eff6ff','#f0fdf4','#fef2f2','#faf5ff','#fff7ed','#ecfeff'];
+const PTX=['#1d4ed8','#15803d','#991b1b','#7e22ce','#c2410c','#0e7490'];
+const SK='cc_v3';
+const MO=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-const STORAGE_KEY = 'content_cal_v1';
-
-const DEMO_TOPICS_1 = `how to find local business leads
+const D1=`how to find local business leads
 how to build a B2B prospect list
 local business prospecting tips
 how to find small business contact information
@@ -434,11 +206,9 @@ roofing contractor leads by zip code
 how to find HVAC contractor contact info
 ZoomInfo alternatives for local sales reps
 cold outreach tips for local businesses
-sales territory mapping by zip code
-how to prioritize leads by Google rating
-Google Maps lead generation tools compared`;
+sales territory mapping by zip code`;
 
-const DEMO_TOPICS_2 = `finance news daily roundup
+const D2=`finance news daily roundup
 stock market momentum analysis
 crypto market update
 fed reserve policy watch
@@ -449,1075 +219,1022 @@ options trading basics
 ETF investing guide
 sector rotation strategy`;
 
-function defaultState() {
-  return {
-    apiKey: '',
-    sites: [
-      { id: 's1', name: 'BizInZip', url: 'bizinzip.com',
-        wpUrl: '', wpUser: 'admin', wpPass: '',
-        category: 'Blog', freq: 'daily', schedHour: 7, schedMin: 0,
-        topic_idx: 0, topics: DEMO_TOPICS_1.trim().split('\n'),
-        description: 'BizInZip is a pay-as-you-go local business lead finder.',
-        audience: 'insurance agents, real estate brokers, sales reps',
-        tone: 'practical, direct, results-focused',
-        niche: 'local B2B lead generation',
-        usp: 'search free, pay $0.10 per contact — no subscription',
-      },
-      { id: 's2', name: 'CallingMarkets', url: 'callingmarkets.com',
-        wpUrl: '', wpUser: 'admin', wpPass: '',
-        category: 'News', freq: 'daily', schedHour: 8, schedMin: 30,
-        topic_idx: 0, topics: DEMO_TOPICS_2.trim().split('\n'),
-        description: 'CallingMarkets is a momentum-based financial signals publication.',
-        audience: 'retail traders, crypto traders, long-term investors',
-        tone: 'balanced, analytical, like a sharp Bloomberg piece',
-        niche: 'finance and markets',
-        usp: 'momentum-based signals for retail traders',
-      },
-    ],
-    posts: [],
-    view: 'calendar',
-    activeSite: null,
-    year: new Date().getFullYear(),
-    month: new Date().getMonth(),
-    modal: null,
-  };
+// ─── STATE ────────────────────────────────────────────────────────────
+function defState(){return{
+  anthropicKey:'',unsplashKey:'',
+  sites:[
+    {id:'s1',name:'BizInZip',url:'bizinzip.com',wpUrl:'',wpUser:'admin',wpPass:'',category:'Blog',freq:'daily',schedHour:7,schedMin:0,topic_idx:0,
+     topics:D1.trim().split('\n'),description:'BizInZip is a pay-as-you-go local business lead finder.',
+     audience:'insurance agents, real estate brokers, sales reps',tone:'practical, direct, results-focused',
+     niche:'local B2B lead generation',usp:'search free, pay $0.10 per contact — no subscription'},
+    {id:'s2',name:'CallingMarkets',url:'callingmarkets.com',wpUrl:'',wpUser:'admin',wpPass:'',category:'News',freq:'daily',schedHour:8,schedMin:30,topic_idx:0,
+     topics:D2.trim().split('\n'),description:'CallingMarkets is a momentum-based financial signals publication.',
+     audience:'retail traders, crypto traders, long-term investors',tone:'balanced, analytical, like a sharp Bloomberg piece',
+     niche:'finance and markets',usp:'momentum-based signals for retail traders'},
+  ],
+  posts:[],view:'calendar',activeSite:null,
+  year:new Date().getFullYear(),month:new Date().getMonth(),
+};}
+
+let S=loadState();
+function loadState(){
+  try{
+    const sv=localStorage.getItem(SK);
+    if(sv){const p=JSON.parse(sv);p.posts=(p.posts||[]).map(x=>({...x,date:new Date(x.date)}));return{...defState(),...p};}
+  }catch(e){}
+  return defState();
 }
+function save(){try{localStorage.setItem(SK,JSON.stringify({...S}));}catch(e){}}
 
-let S = loadState();
-
-function loadState() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Rehydrate dates
-      parsed.posts = (parsed.posts || []).map(p => ({ ...p, date: new Date(p.date) }));
-      return { ...defaultState(), ...parsed, modal: null };
-    }
-  } catch(e) {}
-  return defaultState();
-}
-
-function saveState() {
-  try {
-    const toSave = { ...S, modal: null };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
-  } catch(e) {}
-}
-
-// ═══════════════════════════════════════════════════════════════════
-//  SCHEDULE BUILDER
-// ═══════════════════════════════════════════════════════════════════
-function buildSchedule() {
-  const now = new Date();
-  const existing = S.posts.filter(p => p.manual);
-  const generated = [];
-
-  S.sites.forEach((site, si) => {
-    const topics = site.topics || [];
-    if (!topics.length) return;
-    let cursor = site.topic_idx || 0;
-
-    for (let d = 0; d < 60; d++) {
-      const show = site.freq === 'daily' ||
-        (site.freq === 'weekly' && d % 7 === 0) ||
-        (site.freq === 'biweekly' && d % 14 === 0);
-      if (!show) continue;
-
-      const dt = new Date(now);
-      dt.setDate(dt.getDate() + d);
-      dt.setHours(site.schedHour, site.schedMin, 0, 0);
-
-      const topic = topics[cursor % topics.length];
-      cursor++;
-
-      const past = dt < now;
-      generated.push({
-        id: `g_${site.id}_${d}`,
-        siteId: site.id,
-        topic,
-        date: new Date(dt),
-        status: past ? 'published' : 'scheduled',
-        manual: false,
-      });
+// ─── SCHEDULE — show only 3 upcoming per site ─────────────────────────
+function buildSchedule(){
+  const now=new Date();
+  const manual=S.posts.filter(p=>p.manual);
+  const gen=[];
+  S.sites.forEach(site=>{
+    const topics=site.topics||[];if(!topics.length)return;
+    let cursor=site.topic_idx||0,shown=0;
+    for(let d=0;d<90&&shown<3;d++){
+      const show=site.freq==='daily'||(site.freq==='weekly'&&d%7===0)||(site.freq==='biweekly'&&d%14===0);
+      if(!show)continue;
+      const dt=new Date(now);dt.setDate(dt.getDate()+d);dt.setHours(site.schedHour,site.schedMin,0,0);
+      if(dt<=now)continue;
+      gen.push({id:`g_${site.id}_${d}`,siteId:site.id,topic:topics[cursor%topics.length],title:null,date:new Date(dt),status:'scheduled',manual:false});
+      cursor++;shown++;
     }
   });
-
-  S.posts = [...existing, ...generated];
+  S.posts=[...manual,...gen];
 }
-
 buildSchedule();
 
-// ═══════════════════════════════════════════════════════════════════
-//  HELPERS
-// ═══════════════════════════════════════════════════════════════════
-const fmt12 = (h, m) => {
-  const ap = h >= 12 ? 'pm' : 'am';
-  const hh = h % 12 || 12;
-  return `${hh}:${String(m).padStart(2,'0')}${ap}`;
-};
-const fmtShort = d => {
-  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${M[d.getMonth()]} ${d.getDate()}`;
-};
-const siteColor = i => COLORS[i % COLORS.length];
-const sitePillBg = i => PILL_BG[i % PILL_BG.length];
-const sitePillTx = i => PILL_TX[i % PILL_TX.length];
-const siteIdx = id => S.sites.findIndex(s => s.id === id);
+// ─── HELPERS ──────────────────────────────────────────────────────────
+const f12=(h,m)=>{const ap=h>=12?'pm':'am';const hh=h%12||12;return`${hh}:${String(m).padStart(2,'0')}${ap}`};
+const fS=d=>`${MS[d.getMonth()]} ${d.getDate()}`;
+const C=i=>COLORS[i%COLORS.length];
+const PB=i=>PBG[i%PBG.length];
+const PT=i=>PTX[i%PTX.length];
+const sI=id=>S.sites.findIndex(s=>s.id===id);
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const NOW=()=>new Date().toTimeString().slice(0,8);
 
-function suggestTime() {
-  const taken = S.sites.map(s => s.schedHour * 60 + s.schedMin);
-  let t = 7 * 60;
-  while (taken.some(h => Math.abs(h - t) < 30)) t += 30;
-  return { h: Math.floor(t / 60), m: t % 60 };
+function suggestTime(){
+  const taken=S.sites.map(s=>s.schedHour*60+s.schedMin);
+  let t=7*60;while(taken.some(h=>Math.abs(h-t)<30))t+=30;
+  return{h:Math.floor(t/60),m:t%60};
+}
+function ow(){
+  for(let i=0;i<S.sites.length;i++)for(let j=i+1;j<S.sites.length;j++){
+    const d=Math.abs((S.sites[i].schedHour*60+S.sites[i].schedMin)-(S.sites[j].schedHour*60+S.sites[j].schedMin));
+    if(d<30)return`${S.sites[i].name} &amp; ${S.sites[j].name} within 30 min`;
+  }return'';
+}
+function qPrev(topics,freq,h,m,start=0,n=6){
+  if(!topics||!topics.length)return'<div style="font-size:11px;color:var(--t3);padding:4px 0">No topics yet</div>';
+  const now=new Date();let html='',cursor=start,d=0,shown=0;
+  while(shown<n&&d<90){
+    const show=freq==='daily'||(freq==='weekly'&&d%7===0)||(freq==='biweekly'&&d%14===0);
+    if(show){const dt=new Date(now);dt.setDate(dt.getDate()+d);
+      html+=`<div class="qrow"><span class="qdate">${fS(dt)}</span><span style="color:var(--text)">${esc(topics[cursor%topics.length])}</span></div>`;
+      cursor++;shown++;}d++;
+  }return html;
 }
 
-function checkOverlap() {
-  for (let i = 0; i < S.sites.length; i++) {
-    for (let j = i + 1; j < S.sites.length; j++) {
-      const diff = Math.abs(
-        (S.sites[i].schedHour * 60 + S.sites[i].schedMin) -
-        (S.sites[j].schedHour * 60 + S.sites[j].schedMin)
-      );
-      if (diff < 30) return `${S.sites[i].name} & ${S.sites[j].name} are within 30 min`;
-    }
-  }
-  return '';
+// ─── TOAST ────────────────────────────────────────────────────────────
+function toast(msg,type='ok'){
+  const el=document.createElement('div');el.className=`toast t-${type}`;el.textContent=msg;
+  document.getElementById('toasts').appendChild(el);setTimeout(()=>el.remove(),3500);
 }
 
-function buildQPreview(topics, freq, h, m, startIdx = 0, count = 7) {
-  if (!topics || !topics.length) return '<div style="font-size:11px;color:var(--text-3);padding:4px 0">No topics entered yet</div>';
-  const now = new Date();
-  let lines = '';
-  let cursor = startIdx;
-  let d = 0, shown = 0;
-  while (shown < count && d < 90) {
-    const show = freq === 'daily' ||
-      (freq === 'weekly' && d % 7 === 0) ||
-      (freq === 'biweekly' && d % 14 === 0);
-    if (show) {
-      const dt = new Date(now);
-      dt.setDate(dt.getDate() + d);
-      lines += `<div class="qrow"><span class="qdate">${fmtShort(dt)}</span><span class="qtopic">${esc(topics[cursor % topics.length])}</span></div>`;
-      cursor++;
-      shown++;
-    }
-    d++;
-  }
-  return lines;
-}
-
-const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-
-// ═══════════════════════════════════════════════════════════════════
-//  TOAST
-// ═══════════════════════════════════════════════════════════════════
-function toast(msg, type = 'ok') {
-  const el = document.createElement('div');
-  el.className = `toast toast-${type}`;
-  el.textContent = msg;
-  document.getElementById('toasts').appendChild(el);
-  setTimeout(() => el.remove(), 3500);
-}
-
-// ═══════════════════════════════════════════════════════════════════
-//  ANTHROPIC API
-// ═══════════════════════════════════════════════════════════════════
-async function callClaude(prompt, maxTokens = 2500) {
-  if (!S.apiKey) throw new Error('No Anthropic API key configured. Click the key icon in the top bar.');
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': S.apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: maxTokens,
-      messages: [{ role: 'user', content: prompt }],
-    }),
+// ─── ANTHROPIC API ────────────────────────────────────────────────────
+async function claude(prompt,maxTok=2800){
+  if(!S.anthropicKey)throw new Error('No Anthropic API key — click "Keys" in top bar.');
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':S.anthropicKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:maxTok,messages:[{role:'user',content:prompt}]}),
   });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `API error ${res.status}`);
-  }
-
-  const data = await res.json();
-  return data.content[0].text.trim();
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e?.error?.message||`API ${r.status}`);}
+  return(await r.json()).content[0].text.trim();
 }
 
-async function writeArticle(topic, site) {
-  const today = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+async function writeArticle(topic,site){
+  const today=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
 
-  const prompt = `You are a content writer for ${site.name}, a ${site.niche || 'general'} website.
+  // Build internal linking instructions
+  const pillarPages=site.pillarPages||[];
+  const sitemapUrl=site.sitemapUrl||'';
+
+  let linkingBlock='';
+  if(sitemapUrl||pillarPages.length){
+    linkingBlock+='\nINTERNAL LINKING RULES:\n';
+    if(pillarPages.length){
+      linkingBlock+='Pillar pages — you MUST link to these using the exact anchor text shown whenever it fits naturally in the article (aim to use 1-3 of these per article):\n';
+      pillarPages.forEach(p=>{
+        linkingBlock+=`  - Anchor text: "${p.keyphrase}" → URL: ${p.url}\n`;
+      });
+      linkingBlock+='Use the exact anchor text as the <a> link text. Only link when it reads naturally — never force it.\n';
+    }
+    if(sitemapUrl){
+      linkingBlock+=`Sitemap: ${sitemapUrl}\n`;
+      linkingBlock+='You may also reference other relevant pages from this site\'s sitemap as supporting internal links where genuinely useful. Use descriptive anchor text that matches the linked page\'s topic.\n';
+    }
+  }
+
+  const text=await claude(`You are a content writer for ${site.name}, a ${site.niche||'general'} website.
 
 TODAY: ${today}
-TOPIC: ${topic}
+TOPIC AREA: ${topic}
 
-ABOUT THE SITE:
-${site.description || `${site.name} serves ${site.audience || 'general readers'}.`}
+SITE INFO:
+${site.description||`${site.name} serves ${site.audience||'general readers'}.`}
+AUDIENCE: ${site.audience||'general readers'}
+TONE: ${site.tone||'helpful and informative'}
+${site.usp?`USP (reference naturally): ${site.usp}`:''}
+${linkingBlock}
+TITLE RULE: Create an original, compelling SEO headline. Do NOT simply restate the topic word-for-word. Make it specific and search-friendly. Example — if topic is "how insurance agents find new clients", a strong title is "7 Proven Ways Insurance Agents Land New Clients in 2025 (Without Cold Calling)".
 
-AUDIENCE: ${site.audience || 'general readers'}
-TONE: ${site.tone || 'helpful and informative'}
-${site.usp ? `USP (reference naturally where relevant): ${site.usp}` : ''}
+ARTICLE REQUIREMENTS:
+- 650-900 words, SEO-optimised
+- Strong hook opening paragraph
+- 2-3 subheadings using <h2> tags
+- Actionable insights throughout
+- HTML only: <p>, <strong>, <h2>, <a href="..."> — no markdown
+- For all internal links use exact <a href="URL">anchor text</a> format
+- No disclaimers or "this is not advice" language
+- End with a clear call to action
 
-REQUIREMENTS:
-- Length: 650–900 words
-- SEO-optimised: use the topic as the primary keyword naturally throughout
-- Opening paragraph that hooks the reader immediately
-- Body paragraphs covering the topic thoroughly with actionable insights
-- Clear conclusion
-- HTML format: use <p> tags for paragraphs, <strong> for emphasis
-- No bullet lists, no markdown headers in the content field
-- Do NOT add disclaimers or "this is not advice" language
-
-Respond with ONLY a valid JSON object (no markdown fences, no preamble):
-{"title":"<SEO headline>","content":"<full article in HTML p tags>","excerpt":"<2-sentence meta description under 160 chars>","tags":["tag1","tag2","tag3"],"search_term":"<3-5 word Unsplash photo search term>"}`;
-
-  const text = await callClaude(prompt);
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('Could not parse article JSON from Claude response');
-  return JSON.parse(match[0]);
+Respond ONLY with valid JSON (no markdown fences):
+{"title":"<compelling headline, NOT a copy of topic>","content":"<full article HTML with internal links embedded>","excerpt":"<meta description under 160 chars>","tags":["tag1","tag2","tag3"],"search_term":"<3-5 word Unsplash photo search>"}`);
+  const m=text.match(/\{[\s\S]*\}/);if(!m)throw new Error('Could not parse article JSON from Claude');
+  return JSON.parse(m[0]);
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  WORDPRESS PUBLISHING
-// ═══════════════════════════════════════════════════════════════════
-async function publishToWP(site, article, logFn) {
-  const base = site.wpUrl.replace(/\/$/, '');
-  const creds = btoa(`${site.wpUser}:${site.wpPass}`);
-  const headers = {
-    'Authorization': `Basic ${creds}`,
-    'Content-Type': 'application/json',
-  };
-
-  // Get or create category
-  logFn('Finding WordPress category…', 'info');
-  let catId = null;
-  try {
-    const catRes = await fetch(`${base}/wp-json/wp/v2/categories?search=${encodeURIComponent(site.category)}&per_page=10`, { headers: { 'Authorization': `Basic ${creds}` } });
-    const cats = await catRes.json();
-    const found = cats.find(c => c.name.toLowerCase() === site.category.toLowerCase());
-    if (found) {
-      catId = found.id;
-    } else {
-      const create = await fetch(`${base}/wp-json/wp/v2/categories`, { method: 'POST', headers, body: JSON.stringify({ name: site.category }) });
-      const newCat = await create.json();
-      catId = newCat.id;
-      logFn(`Created category: ${site.category}`, 'ok');
-    }
-    logFn(`Category: ${site.category} (ID ${catId})`, 'ok');
-  } catch(e) {
-    logFn(`Category lookup failed: ${e.message}`, 'warn');
-  }
-
-  // Create post
-  logFn('Publishing post…', 'info');
-  const postData = {
-    title: article.title,
-    content: article.content,
-    excerpt: article.excerpt || '',
-    status: 'publish',
-    categories: catId ? [catId] : [],
-    comment_status: 'open',
-  };
-
-  const postRes = await fetch(`${base}/wp-json/wp/v2/posts`, {
-    method: 'POST', headers,
-    body: JSON.stringify(postData),
+// ─── UNSPLASH ─────────────────────────────────────────────────────────
+async function fetchPhoto(term){
+  if(!S.unsplashKey)throw new Error('No Unsplash API key — click "Keys" in top bar.');
+  const r=await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(term)}&per_page=5&orientation=landscape&content_filter=high`,{
+    headers:{'Authorization':`Client-ID ${S.unsplashKey}`}
   });
+  if(!r.ok)throw new Error(`Unsplash ${r.status}`);
+  const d=await r.json();
+  if(!d.results?.length)throw new Error(`No photo found for "${term}"`);
+  const p=d.results[0];
+  fetch(p.links.download_location,{headers:{'Authorization':`Client-ID ${S.unsplashKey}`}}).catch(()=>{});
+  return{url:p.urls.regular,photographer:p.user.name,photographerUrl:p.user.links.html,alt:p.alt_description||term};
+}
 
-  if (!postRes.ok) {
-    const err = await postRes.json().catch(() => ({}));
-    throw new Error(err?.message || `WordPress error ${postRes.status}`);
+// ─── WORDPRESS ────────────────────────────────────────────────────────
+async function wpReq(site,path,opts={}){
+  const base=site.wpUrl.replace(/\/$/,'');
+  const creds=btoa(`${site.wpUser}:${site.wpPass}`);
+  return fetch(`${base}/wp-json/wp/v2${path}`,{
+    ...opts,
+    headers:{'Authorization':`Basic ${creds}`,'Content-Type':'application/json',...(opts.headers||{})},
+  });
+}
+
+async function testWP(site){
+  let r;
+  try{r=await wpReq(site,'/users/me');}
+  catch(e){throw new Error('Could not reach WordPress — check URL and network');}
+  if(r.status===401||r.status===403)throw new Error('Authentication failed — check username and app password');
+  if(r.status===404)throw new Error('WordPress REST API not found — check WP URL (needs /wp-json support)');
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e?.message||`HTTP ${r.status}`);}
+  const u=await r.json();return u.name||'Connected';
+}
+
+async function getOrCreateCat(site,name){
+  const r=await wpReq(site,`/categories?search=${encodeURIComponent(name)}&per_page=20`);
+  if(r.ok){
+    const cats=await r.json();
+    const found=cats.find(c=>c.name.toLowerCase()===name.toLowerCase());
+    if(found)return found.id;
   }
+  const cr=await wpReq(site,'/categories',{method:'POST',body:JSON.stringify({name})});
+  if(!cr.ok){const e=await cr.json().catch(()=>({}));throw new Error(`Category error: ${e?.message||cr.status}`);}
+  return(await cr.json()).id;
+}
 
-  const post = await postRes.json();
-  logFn(`Published: ${post.link}`, 'ok');
+async function uploadPhoto(site,photo){
+  const imgR=await fetch(photo.url);
+  if(!imgR.ok)throw new Error('Could not download photo from Unsplash');
+  const blob=await imgR.blob();
+  const base=site.wpUrl.replace(/\/$/,'');
+  const creds=btoa(`${site.wpUser}:${site.wpPass}`);
+  const r=await fetch(`${base}/wp-json/wp/v2/media`,{
+    method:'POST',
+    headers:{'Authorization':`Basic ${creds}`,'Content-Disposition':`attachment; filename="cc-${Date.now()}.jpg"`,'Content-Type':'image/jpeg'},
+    body:blob,
+  });
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(`Media upload failed: ${e?.message||r.status}`);}
+  const media=await r.json();
+  const credit=`Photo by <a href="${photo.photographerUrl}" target="_blank">${photo.photographer}</a> on <a href="https://unsplash.com" target="_blank">Unsplash</a>`;
+  await wpReq(site,`/media/${media.id}`,{method:'POST',body:JSON.stringify({caption:credit,alt_text:photo.alt})});
+  return media.id;
+}
+
+async function publishPost(site,article,mediaId,logFn){
+  const catId=await getOrCreateCat(site,site.category||'Blog');
+  logFn(`Category: ${site.category} (ID ${catId})`,'ok');
+  const credit=article._photo?`<p style="font-size:11px;color:#9a9a9a;margin-top:24px">Photo: <a href="${article._photo.photographerUrl}">${article._photo.photographer}</a> / Unsplash</p>`:'';
+  const postData={title:article.title,content:article.content+credit,excerpt:article.excerpt||'',status:'publish',categories:catId?[catId]:[],comment_status:'open'};
+  if(mediaId)postData.featured_media=mediaId;
+  const r=await wpReq(site,'/posts',{method:'POST',body:JSON.stringify(postData)});
+  if(!r.ok){
+    const e=await r.json().catch(()=>({}));
+    const hint=r.status===401?'Authentication failed — verify WP credentials':r.status===403?'Permission denied — ensure your WP user can publish posts':r.status===404?'REST API endpoint not found — check WP URL':'Check WP URL, credentials, and that REST API is enabled';
+    throw new Error(`Publish failed (${r.status}): ${e?.message||hint}`);
+  }
+  const post=await r.json();
+  logFn('Verifying post is live…','info');
+  await new Promise(res=>setTimeout(res,2000));
+  try{
+    const v=await fetch(post.link,{method:'HEAD',mode:'no-cors'});
+    logFn(`Post live: ${post.link}`,'ok');
+  }catch(e){logFn(`Note: could not verify URL (CORS) but post was created in WordPress`,'lw');}
+  return post;
+}
+
+// ─── PIPELINE ─────────────────────────────────────────────────────────
+async function runSite(site,logFn,overrideTopic=null){
+  if(!site.wpUrl||!site.wpUser||!site.wpPass)throw new Error('WordPress credentials missing — edit the site to add them.');
+  if(!S.unsplashKey)throw new Error('No Unsplash API key — click "Keys" in top bar.');
+  const topics=site.topics||[];if(!topics.length)throw new Error('No topics configured.');
+  const idx=site.topic_idx||0;
+  const topic=overrideTopic||topics[idx%topics.length];
+  logFn(`Topic area: ${topic}`,'li');
+
+  logFn('Writing article via Claude…','li');
+  const article=await writeArticle(topic,site);
+  logFn(`Title: "${article.title}"`,'lok');
+
+  logFn(`Fetching photo for: ${article.search_term}`,'li');
+  let mediaId=null;
+  try{
+    const photo=await fetchPhoto(article.search_term);
+    article._photo=photo;
+    logFn(`Photo: ${photo.photographer} / Unsplash`,'lok');
+    logFn('Uploading photo to WordPress…','li');
+    mediaId=await uploadPhoto(site,photo);
+    logFn('Featured image uploaded','lok');
+  }catch(e){logFn(`Photo skipped: ${e.message}`,'lw');}
+
+  logFn('Publishing to WordPress…','li');
+  const post=await publishPost(site,article,mediaId,logFn);
+
+  if(!overrideTopic){
+    site.topic_idx=((idx+1)%topics.length);
+    site.last_run=new Date().toISOString();
+  }
+  const todayStr=new Date().toDateString();
+  const sched=S.posts.find(p=>p.siteId===site.id&&p.date.toDateString()===todayStr&&p.status==='scheduled');
+  if(sched){sched.status='published';sched.title=article.title;sched.url=post.link;}
+  buildSchedule();save();
   return post.link;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  RUN PIPELINE
-// ═══════════════════════════════════════════════════════════════════
-async function runSite(site, logFn) {
-  const topics = site.topics || [];
-  if (!topics.length) throw new Error('No topics configured for this site.');
-  if (!site.wpUrl || !site.wpUser || !site.wpPass) throw new Error('WordPress credentials not configured.');
+// ─── RENDER ───────────────────────────────────────────────────────────
+function render(){document.getElementById('app').innerHTML=renderShell();attachHandlers();}
 
-  const idx = site.topic_idx || 0;
-  const topic = topics[idx % topics.length];
-  logFn(`Topic: ${topic}`, 'info');
-
-  logFn('Writing article via Claude…', 'info');
-  const article = await writeArticle(topic, site);
-  logFn(`Title: ${article.title}`, 'ok');
-
-  const url = await publishToWP(site, article, logFn);
-
-  // Advance topic cursor
-  site.topic_idx = (idx + 1) % topics.length;
-  site.last_run = new Date().toISOString();
-
-  // Mark post as published in schedule
-  const todayStr = new Date().toDateString();
-  const sched = S.posts.find(p => p.siteId === site.id && p.date.toDateString() === todayStr && p.status === 'scheduled');
-  if (sched) sched.status = 'published';
-
-  buildSchedule();
-  saveState();
-
-  return url;
+function renderShell(){
+  const ok=S.anthropicKey&&S.unsplashKey;
+  return`${renderTB(ok)}${renderSB()}${renderMain()}`;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  RENDER
-// ═══════════════════════════════════════════════════════════════════
-function render() {
-  const root = document.getElementById('app');
-  root.innerHTML = renderShell();
-  attachHandlers();
-}
-
-function renderShell() {
-  return `
-    ${renderTopbar()}
-    ${renderSidebar()}
-    ${renderMain()}
-  `;
-}
-
-function renderTopbar() {
-  const hasKey = !!S.apiKey;
-  return `<div class="topbar">
-    <div class="topbar-logo">
-      <div class="topbar-logo-dot"></div>
-      Content Calendar
-    </div>
-    <div class="topbar-spacer"></div>
-    <div class="topbar-actions">
-      <button class="btn btn-ghost" id="btn-import-config" title="Import sites_config.json">
-        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Import
-      </button>
-      <button class="btn btn-ghost" id="btn-export-config" title="Export sites_config.json">
-        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        Export
-      </button>
-      <button class="btn ${hasKey ? 'btn-ghost' : 'btn-primary'}" id="btn-api-key">
-        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-        ${hasKey ? 'API key ✓' : 'Set API key'}
+function renderTB(ok){
+  return`<div class="tb">
+    <div class="logo"><div class="logo-dot"></div>Content Calendar</div>
+    <div class="tb-sp"></div>
+    <div class="tb-act">
+      <button class="btn btn-g" id="btn-import">&#8613; Import</button>
+      <button class="btn btn-g" id="btn-export">&#8615; Export</button>
+      <button class="btn ${ok?'btn-g':'btn-p'}" id="btn-keys">
+        &#x1F511; ${ok?'Keys ✓':'Set API keys'}
       </button>
     </div>
   </div>`;
 }
 
-function renderSidebar() {
-  const sch = S.posts.filter(p => p.status === 'scheduled').length;
-  const pub = S.posts.filter(p => p.status === 'published').length;
-  const fail = S.posts.filter(p => p.status === 'failed').length;
-  const topicCount = S.sites.reduce((a, s) => a + (s.topics?.length || 0), 0);
-  const overlap = checkOverlap();
+function renderSB(){
+  const sch=S.posts.filter(p=>p.status==='scheduled').length;
+  const pub=S.posts.filter(p=>p.status==='published').length;
+  const fail=S.posts.filter(p=>p.status==='failed').length;
+  const tc=S.sites.reduce((a,s)=>a+(s.topics?.length||0),0);
+  const overlap=ow();
 
-  const siteRows = S.sites.map((s, i) => {
-    const cnt = S.posts.filter(p => p.siteId === s.id && p.status === 'scheduled').length;
-    const next = s.topics?.[(s.topic_idx || 0) % (s.topics.length || 1)] || '—';
-    const active = S.activeSite === s.id ? 'active' : '';
-    return `<div class="site-row ${active}" data-siteid="${s.id}">
-      <div class="site-dot" style="background:${siteColor(i)}"></div>
-      <div class="site-info">
-        <div class="site-name">${esc(s.name)}</div>
-        <div class="site-next">${esc(next)}</div>
+  const siteRows=S.sites.map((s,i)=>{
+    const cnt=S.posts.filter(p=>p.siteId===s.id&&p.status==='scheduled').length;
+    const next=s.topics?.[(s.topic_idx||0)%(s.topics.length||1)]||'—';
+    const hasWP=!!(s.wpUrl&&s.wpPass);
+    return`<div class="site-row ${S.activeSite===s.id?'active':''}" data-sid="${s.id}" title="Click to filter · Double-click to edit">
+      <div class="sdot" style="background:${C(i)}"></div>
+      <div class="sinfo">
+        <div class="sname">${esc(s.name)}${hasWP?'':' <span style="font-size:9px;color:var(--ytx)">[no WP]</span>'}</div>
+        <div class="snext" title="Next topic: ${esc(next)}">&#8250; ${esc(next)}</div>
       </div>
-      <span class="site-badge">${cnt}</span>
+      <span class="scnt">${cnt}</span>
     </div>`;
   }).join('');
 
-  const timingRows = S.sites.map((s, i) => {
-    const pct = Math.round(((s.schedHour * 60 + s.schedMin) / (24 * 60)) * 100);
-    return `<div class="timing-row">
-      <div class="timing-name">${esc(s.name)}</div>
-      <div class="timing-time">${fmt12(s.schedHour, s.schedMin)}</div>
-      <div class="timing-bar"><div class="timing-fill" style="width:${Math.max(pct,4)}%;background:${siteColor(i)}"></div></div>
-    </div>`;
+  const timing=S.sites.map((s,i)=>{
+    const pct=Math.round(((s.schedHour*60+s.schedMin)/(24*60))*100);
+    return`<div class="trow"><div class="tname">${esc(s.name)}</div><div class="ttime">${f12(s.schedHour,s.schedMin)}</div><div class="tbar"><div class="tfill" style="width:${Math.max(pct,4)}%;background:${C(i)}"></div></div></div>`;
   }).join('');
 
-  return `<div class="sidebar">
-    <div class="sidebar-section">
-      <div class="section-label">Overview</div>
-      <div class="stat-grid">
-        <div class="stat-card"><div class="stat-val">${sch}</div><div class="stat-lbl">Scheduled</div></div>
-        <div class="stat-card"><div class="stat-val">${pub}</div><div class="stat-lbl">Published</div></div>
-        <div class="stat-card"><div class="stat-val">${topicCount}</div><div class="stat-lbl">Topics</div></div>
-        <div class="stat-card${fail ? ' danger' : ''}"><div class="stat-val">${fail}</div><div class="stat-lbl">Failed</div></div>
+  const noKeys=!S.anthropicKey||!S.unsplashKey;
+  return`<div class="sb">
+    <div class="sbs">
+      <div class="slbl">Overview</div>
+      <div class="sgrid">
+        <div class="scard"><div class="sval">${sch}</div><div class="slb">Scheduled</div></div>
+        <div class="scard"><div class="sval">${pub}</div><div class="slb">Published</div></div>
+        <div class="scard"><div class="sval">${tc}</div><div class="slb">Topics</div></div>
+        <div class="scard${fail?' danger':''}"><div class="sval">${fail}</div><div class="slb">Failed</div></div>
       </div>
     </div>
-
-    <div class="sidebar-section">
-      <div class="section-label">Sites</div>
+    <div class="sbs">
+      <div class="slbl">Sites</div>
       <div class="site-list">${siteRows}</div>
-      <button class="add-site-btn" id="btn-add-site">
-        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add site
-      </button>
+      <button class="add-site-btn" id="btn-add-site">+ Add site</button>
     </div>
-
-    <div class="sidebar-section">
-      <div class="section-label">API run order</div>
-      <div class="timing-list">${timingRows}</div>
-      ${overlap ? `<div class="warn-pill"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${overlap}</div>` : ''}
+    <div class="sbs">
+      <div class="slbl">API run order</div>
+      <div class="tlist">${timing}</div>
+      ${overlap?`<div class="warn-pill">&#9888; ${overlap}</div>`:''}
     </div>
-
-    ${!S.apiKey ? `<div class="setup-banner">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      Set your Anthropic API key to enable publishing.
-    </div>` : ''}
+    ${noKeys?`<div class="setup-banner">&#9432; Set your API keys to enable publishing.</div>`:''}
   </div>`;
 }
 
-function renderMain() {
-  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  return `<div class="main">
+function renderMain(){
+  return`<div class="main">
     <div class="main-bar">
-      <div class="month-nav">
+      <div class="mnav">
         <button id="btn-prev">&#8249;</button>
-        <span class="month-label">${MONTHS[S.month]} ${S.year}</span>
+        <span class="mlbl">${MO[S.month]} ${S.year}</span>
         <button id="btn-next">&#8250;</button>
       </div>
-      <div class="view-tabs">
-        <button class="view-tab ${S.view === 'calendar' ? 'on' : ''}" id="btn-vcal">Calendar</button>
-        <button class="view-tab ${S.view === 'list' ? 'on' : ''}" id="btn-vlist">List</button>
+      <div class="vtabs">
+        <button class="vtab ${S.view==='calendar'?'on':''}" id="btn-vcal">Calendar</button>
+        <button class="vtab ${S.view==='list'?'on':''}" id="btn-vlist">List</button>
       </div>
-      <div class="ml-auto" style="display:flex;gap:8px">
-        <button class="btn btn-ghost" id="btn-run-all">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Run all sites
-        </button>
-        <button class="btn btn-primary" id="btn-add-post">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add post
-        </button>
+      <div class="mla">
+        <button class="btn btn-g" id="btn-push">&#9889; Push article</button>
+        <button class="btn btn-g" id="btn-run-all">&#9654; Run all</button>
+        <button class="btn btn-p" id="btn-add-post">+ Schedule</button>
       </div>
     </div>
-    ${S.view === 'calendar' ? renderCalendar() : renderList()}
+    ${S.view==='calendar'?renderCal():renderList()}
   </div>`;
 }
 
-function renderCalendar() {
-  const y = S.year, m = S.month;
-  const firstDay = new Date(y, m, 1).getDay();
-  const days = new Date(y, m + 1, 0).getDate();
-  const today = new Date();
-  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const posts = S.posts.filter(p => S.activeSite ? p.siteId === S.activeSite : true);
-  const byDay = {};
-  posts.forEach(p => {
-    if (p.date.getFullYear() === y && p.date.getMonth() === m) {
-      const k = p.date.getDate();
-      (byDay[k] = byDay[k] || []).push(p);
-    }
-  });
-
-  let cells = DAYS.map(d => `<div class="cal-dow">${d}</div>`).join('');
-  for (let i = 0; i < firstDay; i++) cells += `<div class="cal-cell other-month"></div>`;
-  for (let d = 1; d <= days; d++) {
-    const isToday = today.getFullYear() === y && today.getMonth() === m && today.getDate() === d;
-    const dp = byDay[d] || [];
-    const pills = dp.slice(0, 3).map(p => {
-      const si = siteIdx(p.siteId);
-      const bg = si >= 0 ? sitePillBg(si) : '#f4f4f2';
-      const tx = si >= 0 ? sitePillTx(si) : '#9a9a92';
-      const op = p.status === 'published' ? '.6' : '1';
-      return `<div class="cal-pill" style="background:${bg};color:${tx};opacity:${op}">${esc(p.topic)}</div>`;
+function renderCal(){
+  const y=S.year,m=S.month,fd=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate(),today=new Date();
+  const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const posts=S.posts.filter(p=>S.activeSite?p.siteId===S.activeSite:true);
+  const byDay={};
+  posts.forEach(p=>{if(p.date.getFullYear()===y&&p.date.getMonth()===m){const k=p.date.getDate();(byDay[k]=byDay[k]||[]).push(p);}});
+  let c=DAYS.map(d=>`<div class="cdow">${d}</div>`).join('');
+  for(let i=0;i<fd;i++)c+=`<div class="ccell dim"></div>`;
+  for(let d=1;d<=days;d++){
+    const isT=today.getFullYear()===y&&today.getMonth()===m&&today.getDate()===d;
+    const dp=byDay[d]||[];
+    const pills=dp.slice(0,3).map(p=>{
+      const idx=sI(p.siteId);const bg=idx>=0?PB(idx):'#f4f4f2',tx=idx>=0?PT(idx):'#9a9a92';
+      const published=p.status==='published';
+      // published → show generated title (dimmed); upcoming → show topic area
+      const label=published&&p.title ? p.title : p.topic;
+      const op=published?.55:1;
+      return`<div class="cpill" style="background:${bg};color:${tx};opacity:${op}" title="${esc(published&&p.title?`Title: ${p.title}\nTopic: ${p.topic}`:`Topic: ${p.topic}`)}">${esc(label)}</div>`;
     }).join('');
-    const more = dp.length > 3 ? `<div class="cal-more">+${dp.length - 3} more</div>` : '';
-    cells += `<div class="cal-cell${isToday ? ' today' : ''}" data-day="${d}">
-      <div class="cal-day-num"><span>${d}</span></div>
-      ${pills}${more}
-    </div>`;
+    const more=dp.length>3?`<div class="cmore">+${dp.length-3}</div>`:'';
+    c+=`<div class="ccell${isT?' today':''}" data-day="${d}"><div class="cdn"><span>${d}</span></div>${pills}${more}</div>`;
   }
-
-  return `<div class="cal-wrap"><div class="cal-grid">${cells}</div></div>`;
+  return`<div class="cal-wrap"><div class="cgrid">${c}</div></div>`;
 }
 
-function renderList() {
-  const posts = S.posts
-    .filter(p => S.activeSite ? p.siteId === S.activeSite : true)
-    .sort((a, b) => a.date - b.date);
-
-  if (!posts.length) {
-    return `<div class="list-wrap"><div class="empty-state">
-      <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <div>No posts found</div>
-    </div></div>`;
-  }
-
-  const rows = posts.map(p => {
-    const si = siteIdx(p.siteId);
-    const col = si >= 0 ? siteColor(si) : '#9a9a92';
-    const site = S.sites[si];
-    const badgeClass = { scheduled:'badge-scheduled', published:'badge-published', draft:'badge-draft', failed:'badge-failed', running:'badge-running' }[p.status] || 'badge-draft';
-    return `<div class="list-row">
-      <div><div class="list-date">${fmtShort(p.date)}</div><div class="list-time">${fmt12(p.date.getHours(), p.date.getMinutes())}</div></div>
-      <div class="list-topic">${esc(p.topic)}</div>
-      <div class="list-site"><div class="site-dot" style="background:${col};width:7px;height:7px"></div><span class="list-site-name">${esc(site?.name || '?')}</span></div>
-      <div><span class="badge ${badgeClass}">${p.status}</span></div>
-      <div class="list-actions">
-        ${p.status === 'failed' ? `<button class="btn btn-ghost" style="padding:3px 8px;font-size:11px" data-retry="${p.id}">Retry</button>` : ''}
-        <button class="btn btn-ghost" style="padding:3px 8px;font-size:11px" data-del="${p.id}">
-          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
-        </button>
+function renderList(){
+  const posts=S.posts.filter(p=>S.activeSite?p.siteId===S.activeSite:true).sort((a,b)=>a.date-b.date);
+  if(!posts.length)return`<div class="list-wrap"><div class="empty-state"><div style="font-size:32px;margin-bottom:8px">&#128197;</div><div>No posts found</div></div></div>`;
+  const rows=posts.map(p=>{
+    const idx=sI(p.siteId);const col=idx>=0?C(idx):'#9a9a92';const site=S.sites[idx];
+    const bc={scheduled:'b-sch',published:'b-pub',draft:'b-dra',failed:'b-fai',running:'b-run'}[p.status]||'b-dra';
+    const titleCell=p.title
+      ? `<div class="l-title" title="${esc(p.title)}">${esc(p.title)}</div>`
+      : `<div class="l-title-pending">Generated at publish</div>`;
+    return`<div class="lrow">
+      <div><div class="ld">${fS(p.date)}</div><div class="lt2">${f12(p.date.getHours(),p.date.getMinutes())}</div></div>
+      ${titleCell}
+      <div class="l-topic" title="${esc(p.topic)}">${esc(p.topic)}</div>
+      <div class="lsite"><div class="sdot" style="background:${col};width:7px;height:7px;flex-shrink:0"></div><span class="lsn">${esc(site?.name||'?')}</span></div>
+      <div><span class="badge ${bc}">${p.status}</span></div>
+      <div class="lact">
+        ${p.status==='failed'?`<button class="btn btn-g" style="padding:3px 7px;font-size:10px" data-retry="${p.id}">Retry</button>`:''}
+        ${p.url?`<a href="${esc(p.url)}" target="_blank" class="btn btn-g" style="padding:3px 7px;font-size:10px">View &#8599;</a>`:''}
+        <button class="btn btn-g" style="padding:3px 7px;font-size:10px" data-del="${p.id}">✕</button>
       </div>
     </div>`;
   }).join('');
-
-  return `<div class="list-wrap">
-    <div class="list-header"><div>Date</div><div>Topic</div><div>Site</div><div>Status</div><div></div></div>
-    ${rows}
-  </div>`;
+  return`<div class="list-wrap"><div class="lhdr"><div>Date</div><div>Title</div><div>Topic</div><div>Site</div><div>Status</div><div></div></div>${rows}</div>`;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  MODALS
-// ═══════════════════════════════════════════════════════════════════
-let activeModal = null;
-
-function openModal(html) {
+// ─── MODAL ENGINE ─────────────────────────────────────────────────────
+let _m=null;
+function openModal(html,wide=false){
   closeModal();
-  const bd = document.createElement('div');
-  bd.className = 'modal-backdrop';
-  bd.id = 'modal-backdrop';
-  bd.innerHTML = `<div class="modal">${html}</div>`;
-  bd.addEventListener('click', e => { if (e.target === bd) closeModal(); });
-  document.body.appendChild(bd);
-  activeModal = bd;
+  const bd=document.createElement('div');bd.className='mbd';
+  bd.innerHTML=`<div class="modal${wide?' wide':''}">${html}</div>`;
+  bd.addEventListener('click',e=>{if(e.target===bd)closeModal();});
+  document.body.appendChild(bd);_m=bd;
 }
-
-function closeModal() {
-  if (activeModal) { activeModal.remove(); activeModal = null; }
-  const old = document.getElementById('modal-backdrop');
-  if (old) old.remove();
+function closeModal(){if(_m){_m.remove();_m=null;}}
+function hookTabs(){
+  const tabs=[...document.querySelectorAll('.mtab')];
+  const panels=tabs.map(t=>document.getElementById(`tp-${t.dataset.tab}`));
+  tabs.forEach((t,i)=>t.addEventListener('click',()=>{
+    tabs.forEach(x=>x.classList.remove('on'));panels.forEach(x=>{if(x)x.style.display='none';});
+    t.classList.add('on');if(panels[i])panels[i].style.display='';
+  }));
 }
-
-function tabSwitch(tabs, panels) {
-  tabs.forEach((t, i) => {
-    t.addEventListener('click', () => {
-      tabs.forEach(x => x.classList.remove('on'));
-      panels.forEach(x => x.style.display = 'none');
-      t.classList.add('on');
-      panels[i].style.display = '';
-    });
-  });
+function addLog(logId,msg,cls='li'){
+  const el=document.getElementById(logId);if(!el)return;
+  el.innerHTML+=`<div class="ll"><span class="lts">${NOW()}</span><span class="${cls}">${esc(msg)}</span></div>`;
+  el.scrollTop=el.scrollHeight;
 }
+function setP(id,pct){const el=document.getElementById(id);if(el)el.style.width=pct+'%';}
 
-// ── API Key Modal ──
-function openApiKeyModal() {
+// ─── KEYS MODAL ───────────────────────────────────────────────────────
+function openKeysModal(){
   openModal(`
-    <div class="modal-title">Anthropic API key</div>
-    <div class="field">
-      <label>API key</label>
-      <input id="ak-input" type="password" class="api-key-input" placeholder="sk-ant-..." value="${esc(S.apiKey)}">
-      <div class="field-hint">Stored in your browser's localStorage only. Never sent anywhere except Anthropic's API.</div>
+    <div class="mtitle">API keys</div>
+    <div class="field"><label>Anthropic API key</label>
+      <input id="k-ant" type="password" class="mono" placeholder="sk-ant-..." value="${esc(S.anthropicKey)}">
+      <div class="fhint">Stored in your browser localStorage only. Used to write articles via Claude.</div>
     </div>
-    <div class="field">
-      <label>Model</label>
+    <div class="field"><label>Unsplash Access Key</label>
+      <input id="k-uns" type="password" class="mono" placeholder="Your Unsplash access key" value="${esc(S.unsplashKey)}">
+      <div class="fhint">Required for featured images on every post. Free at <a href="https://unsplash.com/developers" target="_blank">unsplash.com/developers</a> (Demo app, 50 req/hr).</div>
+    </div>
+    <div class="field"><label>Claude model (fixed)</label>
       <input value="claude-sonnet-4-6" disabled style="opacity:.5">
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" id="ak-cancel">Cancel</button>
-      <button class="btn btn-primary" id="ak-save">Save</button>
+    <div class="mact">
+      <button class="btn btn-g" id="k-cancel">Cancel</button>
+      <button class="btn btn-p" id="k-save">Save keys</button>
     </div>
   `);
-  document.getElementById('ak-cancel').onclick = closeModal;
-  document.getElementById('ak-save').onclick = () => {
-    S.apiKey = document.getElementById('ak-input').value.trim();
-    saveState(); closeModal(); render();
-    toast('API key saved', 'ok');
+  document.getElementById('k-cancel').onclick=closeModal;
+  document.getElementById('k-save').onclick=()=>{
+    S.anthropicKey=document.getElementById('k-ant').value.trim();
+    S.unsplashKey=document.getElementById('k-uns').value.trim();
+    save();closeModal();render();toast('Keys saved','ok');
   };
 }
 
-// ── Add/Edit Site Modal ──
-function openSiteModal(siteId = null) {
-  const site = siteId ? S.sites.find(s => s.id === siteId) : null;
-  const sg = suggestTime();
-  const isEdit = !!site;
+// ─── PILLAR PAGE HELPERS ──────────────────────────────────────────────
+function renderPillarRows(pages){
+  if(!pages||!pages.length)return'';
+  return pages.map((p,i)=>`
+    <div class="pillar-row" data-pi="${i}">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.keyphrase||'(no keyphrase)')}</div>
+        <div style="font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px">${esc(p.url||'(no url)')}</div>
+      </div>
+      <button class="btn btn-g" style="padding:2px 8px;font-size:10px;flex-shrink:0" data-del-pillar="${i}">✕</button>
+    </div>`).join('');
+}
 
-  openModal(`
-    <div class="modal-title">${isEdit ? `Edit — ${esc(site.name)}` : 'Add site'}</div>
-    <div class="modal-tabs">
-      <button class="modal-tab on" data-tab="0">Site info</button>
-      <button class="modal-tab" data-tab="1">WordPress</button>
-      <button class="modal-tab" data-tab="2">Topics &amp; context</button>
+function hookPillarTab(currentPages){
+  // keep a live copy we mutate
+  let pages=[...currentPages];
+
+  const refresh=()=>{
+    const container=document.getElementById('s-pillars');
+    const empty=document.getElementById('s-pillar-empty');
+    if(container)container.innerHTML=renderPillarRows(pages);
+    if(empty)empty.style.display=pages.length?'none':'block';
+    // re-attach delete handlers
+    document.querySelectorAll('[data-del-pillar]').forEach(btn=>{
+      btn.onclick=()=>{pages.splice(parseInt(btn.dataset.delPillar),1);refresh();};
+    });
+    // expose to save handler via a closure on the element
+    const phantom=document.getElementById('s-pillar-store');
+    if(phantom)phantom.value=JSON.stringify(pages);
+  };
+
+  document.getElementById('s-add-pillar').onclick=()=>{
+    openPillarEntryModal(newPage=>{
+      pages.push(newPage);refresh();
+    });
+  };
+
+  refresh();
+  return()=>pages; // getter so save handler can call it
+}
+
+function openPillarEntryModal(onSave){
+  // Temporarily swap to a nested modal — keep backdrop, swap modal content
+  const existing=document.querySelector('.mbd .modal');
+  if(!existing)return;
+  const prev=existing.innerHTML;
+  existing.innerHTML=`
+    <div class="mtitle" style="font-size:14px">Add pillar page</div>
+    <div class="field">
+      <label>Target URL</label>
+      <input id="pp-url" placeholder="https://myblog.com/how-it-works">
     </div>
+    <div class="field">
+      <label>Target keyphrase</label>
+      <input id="pp-kp" placeholder="local business lead finder">
+      <div class="fhint">Exact anchor text Claude uses when linking to this page. Keep it natural — 2-5 words works best.</div>
+    </div>
+    <div class="mact">
+      <button class="btn btn-g" id="pp-back">Back</button>
+      <button class="btn btn-p" id="pp-add">Add pillar page</button>
+    </div>
+  `;
+  document.getElementById('pp-back').onclick=()=>{existing.innerHTML=prev;rehookSiteModal();};
+  document.getElementById('pp-add').onclick=()=>{
+    const url=document.getElementById('pp-url').value.trim();
+    const keyphrase=document.getElementById('pp-kp').value.trim();
+    if(!url||!keyphrase){toast('URL and keyphrase are both required','err');return;}
+    existing.innerHTML=prev;
+    rehookSiteModal();
+    onSave({url,keyphrase});
+  };
+}
 
-    <div id="tab-0">
-      <div class="field"><label>Site name</label><input id="s-name" value="${esc(site?.name || '')}"></div>
-      <div class="field"><label>Domain</label><input id="s-url" value="${esc(site?.url || '')}" placeholder="myblog.com"></div>
+// Re-attach the live handlers after returning from nested modal
+function rehookSiteModal(){
+  // re-hook connection test
+  const testBtn=document.getElementById('s-test');
+  if(testBtn){
+    testBtn.onclick=async()=>{
+      const btn=document.getElementById('s-test');const res=document.getElementById('s-conn-result');
+      const ts={wpUrl:document.getElementById('s-wp')?.value.trim()||'',wpUser:document.getElementById('s-wpu')?.value.trim()||'admin',wpPass:document.getElementById('s-wpp')?.value||''};
+      if(!ts.wpUrl||!ts.wpPass){res.innerHTML=`<div class="conn-row" style="margin-bottom:8px">⚠ Enter WP URL and app password first</div>`;return;}
+      btn.disabled=true;btn.textContent='Testing…';res.innerHTML='';
+      try{const name=await testWP(ts);res.innerHTML=`<div class="conn-row" style="border-color:#86efac;background:var(--gbg);color:var(--gtx);margin-bottom:8px">✅ Connected as <strong>${esc(name)}</strong></div>`;}
+      catch(e){res.innerHTML=`<div class="conn-row" style="border-color:#fca5a5;background:var(--rbg);color:var(--rtx);margin-bottom:8px">❌ ${esc(e.message)}</div>`;}
+      btn.disabled=false;btn.textContent='✓ Test WordPress connection';
+    };
+  }
+  // re-hook add pillar
+  const addPillarBtn=document.getElementById('s-add-pillar');
+  if(addPillarBtn){
+    // read current pages from the store input
+    const store=document.getElementById('s-pillar-store');
+    let pages=[];try{pages=JSON.parse(store?.value||'[]');}catch(e){}
+    addPillarBtn.onclick=()=>{
+      openPillarEntryModal(newPage=>{
+        pages.push(newPage);
+        const container=document.getElementById('s-pillars');
+        const empty=document.getElementById('s-pillar-empty');
+        if(container)container.innerHTML=renderPillarRows(pages);
+        if(empty)empty.style.display=pages.length?'none':'block';
+        document.querySelectorAll('[data-del-pillar]').forEach(btn=>{
+          btn.onclick=()=>{pages.splice(parseInt(btn.dataset.delPillar),1);
+            const c2=document.getElementById('s-pillars');const e2=document.getElementById('s-pillar-empty');
+            if(c2)c2.innerHTML=renderPillarRows(pages);if(e2)e2.style.display=pages.length?'none':'block';
+            document.querySelectorAll('[data-del-pillar]').forEach(b2=>b2.onclick=b2.onclick);
+            if(store)store.value=JSON.stringify(pages);
+          };
+        });
+        if(store)store.value=JSON.stringify(pages);
+      });
+    };
+  }
+  // re-hook tab switching
+  hookTabs();
+}
+
+// ─── SITE MODAL ───────────────────────────────────────────────────────
+function openSiteModal(siteId=null){
+  const site=siteId?S.sites.find(s=>s.id===siteId):null;
+  const sg=suggestTime();const isEdit=!!site;
+  openModal(`
+    <div class="mtitle">${isEdit?`Edit — ${esc(site.name)}`:'Add site'}</div>
+    <div class="mtabs">
+      <button class="mtab on" data-tab="0">Site info</button>
+      <button class="mtab" data-tab="1">WordPress</button>
+      <button class="mtab" data-tab="2">Topics &amp; context</button>
+      <button class="mtab" data-tab="3">Internal linking</button>
+    </div>
+    <div id="tp-0">
+      <div class="field"><label>Site name</label><input id="s-name" value="${esc(site?.name||'')}"></div>
+      <div class="field"><label>Domain</label><input id="s-url" value="${esc(site?.url||'')}" placeholder="myblog.com"></div>
       <div class="field"><label>Post frequency</label>
         <select id="s-freq">
-          <option value="daily" ${site?.freq==='daily'||!site?'selected':''}>Daily</option>
+          <option value="daily" ${(!site||site.freq==='daily')?'selected':''}>Daily</option>
           <option value="weekly" ${site?.freq==='weekly'?'selected':''}>Weekly</option>
           <option value="biweekly" ${site?.freq==='biweekly'?'selected':''}>Biweekly</option>
         </select>
       </div>
-      <div class="field">
-        <label>Schedule time (UTC)${!isEdit ? ` — ${fmt12(sg.h, sg.m)} suggested to avoid overlap` : ''}</label>
+      <div class="field"><label>Schedule time (UTC)${!isEdit?` — ${f12(sg.h,sg.m)} suggested to avoid overlap`:''}</label>
         <div style="display:flex;gap:8px;align-items:center">
-          <input id="s-hour" type="number" min="0" max="23" value="${site?.schedHour ?? sg.h}" style="width:70px">
-          <span style="color:var(--text-3)">:</span>
-          <input id="s-min" type="number" min="0" max="59" step="15" value="${site?.schedMin ?? sg.m}" style="width:70px">
+          <input id="s-h" type="number" min="0" max="23" value="${site?.schedHour??sg.h}" style="width:68px">
+          <span style="color:var(--t3)">:</span>
+          <input id="s-m" type="number" min="0" max="59" step="15" value="${site?.schedMin??sg.m}" style="width:68px">
         </div>
       </div>
-      ${isEdit ? `<button class="btn btn-danger" id="s-delete" style="width:100%;justify-content:center;margin-top:4px">Remove site</button>` : ''}
+      ${isEdit?`<button class="btn btn-d" id="s-del" style="width:100%;justify-content:center;margin-top:8px">Remove this site</button>`:''}
     </div>
-
-    <div id="tab-1" style="display:none">
-      <div class="field"><label>WordPress URL</label><input id="s-wp" value="${esc(site?.wpUrl || '')}" placeholder="https://myblog.com"></div>
-      <div class="field-row">
-        <div class="field"><label>Username</label><input id="s-wpu" value="${esc(site?.wpUser || 'admin')}"></div>
-        <div class="field"><label>App password</label><input id="s-wpp" type="password" placeholder="${isEdit && site?.wpPass ? '••••••••' : 'xxxx xxxx xxxx'}" value="${esc(site?.wpPass || '')}"></div>
+    <div id="tp-1" style="display:none">
+      <div class="field"><label>WordPress URL</label><input id="s-wp" value="${esc(site?.wpUrl||'')}" placeholder="https://myblog.com"></div>
+      <div class="frow">
+        <div class="field"><label>Username</label><input id="s-wpu" value="${esc(site?.wpUser||'admin')}"></div>
+        <div class="field"><label>App password</label><input id="s-wpp" type="password" placeholder="${isEdit&&site?.wpPass?'••••••••':'xxxx xxxx xxxx'}" value="${esc(site?.wpPass||'')}"></div>
       </div>
-      <div class="field"><label>Category name</label><input id="s-cat" value="${esc(site?.category || 'Blog')}"></div>
-      <div class="field-hint" style="margin-top:4px">Generate an app password at WP Admin → Users → Profile → Application Passwords. Stored in localStorage only.</div>
+      <div class="field"><label>WordPress category name</label><input id="s-cat" value="${esc(site?.category||'Blog')}"></div>
+      <div class="fhint" style="margin-bottom:12px">Generate an app password at WP Admin → Users → Profile → Application Passwords. Use that, not your login password.</div>
+      <div id="s-conn-result"></div>
+      <button class="btn btn-g" id="s-test" style="width:100%;justify-content:center">&#10003; Test WordPress connection</button>
     </div>
-
-    <div id="tab-2" style="display:none">
+    <div id="tp-2" style="display:none">
+      <div class="field"><label>Topics — one per line${isEdit?` · ${site.topics?.length||0} loaded, on #${(site.topic_idx||0)+1}`:''}<br><span style="font-weight:400;color:var(--t3)">Posted in order, then loops. Calendar shows 3 upcoming. Claude generates the actual title at publish time.</span></label>
+        <textarea id="s-topics" style="font-size:12px;line-height:1.6;min-height:96px">${esc((site?.topics||[]).join('\n'))}</textarea>
+      </div>
+      <div class="fhint" style="margin-bottom:5px">Upcoming topics:</div>
+      <div class="qprev" id="s-qp">${qPrev(site?.topics||[],site?.freq||'daily',site?.schedHour??sg.h,site?.schedMin??sg.m,site?.topic_idx||0)}</div>
+      <div class="field" style="margin-top:11px"><label>Site description (used in article prompts)</label><textarea id="s-desc">${esc(site?.description||'')}</textarea></div>
+      <div class="frow">
+        <div class="field"><label>Audience</label><input id="s-aud" value="${esc(site?.audience||'')}" placeholder="sales reps, agents"></div>
+        <div class="field"><label>Tone</label><input id="s-tone" value="${esc(site?.tone||'')}" placeholder="practical and direct"></div>
+      </div>
+      <div class="frow">
+        <div class="field"><label>Niche</label><input id="s-niche" value="${esc(site?.niche||'')}" placeholder="local B2B lead gen"></div>
+        <div class="field"><label>USP</label><input id="s-usp" value="${esc(site?.usp||'')}" placeholder="no subscription needed"></div>
+      </div>
+    </div>
+    <div id="tp-3" style="display:none">
       <div class="field">
-        <label>Topics — one per line, published in order then loops${isEdit ? ` (${site.topics?.length || 0} loaded, on topic ${(site.topic_idx||0)+1})` : ''}</label>
-        <textarea id="s-topics" style="font-size:12px;line-height:1.6;min-height:100px">${esc((site?.topics || []).join('\n'))}</textarea>
+        <label>Sitemap URL</label>
+        <input id="s-sitemap" value="${esc(site?.sitemapUrl||'')}" placeholder="https://myblog.com/sitemap.xml">
+        <div class="fhint">Claude will be told this sitemap exists and can reference pages from it for relevant internal links within articles.</div>
       </div>
-      <div class="field-hint" style="margin-bottom:6px">Schedule preview:</div>
-      <div class="queue-preview" id="s-qpreview">${buildQPreview(site?.topics || [], site?.freq || 'daily', site?.schedHour ?? sg.h, site?.schedMin ?? sg.m, site?.topic_idx || 0)}</div>
-      <div class="field" style="margin-top:12px"><label>Site description (for article prompts)</label><textarea id="s-desc">${esc(site?.description || '')}</textarea></div>
-      <div class="field-row">
-        <div class="field"><label>Audience</label><input id="s-aud" value="${esc(site?.audience || '')}" placeholder="sales reps, agents"></div>
-        <div class="field"><label>Tone</label><input id="s-tone" value="${esc(site?.tone || '')}" placeholder="practical and direct"></div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label>Niche</label><input id="s-niche" value="${esc(site?.niche || '')}" placeholder="local B2B lead generation"></div>
-        <div class="field"><label>USP</label><input id="s-usp" value="${esc(site?.usp || '')}" placeholder="pay per contact, no subscription"></div>
+      <div style="margin-top:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--t2)">Pillar pages</div>
+            <div class="fhint" style="margin-top:1px">These are your most important pages. Claude will link back to them using your exact target keyphrase whenever naturally relevant.</div>
+          </div>
+          <button class="btn btn-g" id="s-add-pillar" style="padding:4px 10px;font-size:11px;flex-shrink:0">+ Add page</button>
+        </div>
+        <div id="s-pillars">${renderPillarRows(site?.pillarPages||[])}</div>
+        <div id="s-pillar-empty" style="display:${(site?.pillarPages||[]).length?'none':'block'};font-size:12px;color:var(--t3);padding:12px 0;text-align:center;border:1px dashed var(--border);border-radius:var(--r)">No pillar pages yet — add your most important pages above</div>
+        <input type="hidden" id="s-pillar-store" value="${esc(JSON.stringify(site?.pillarPages||[]))}">
       </div>
     </div>
-
-    <div class="modal-actions">
-      <button class="btn btn-ghost" id="s-cancel">Cancel</button>
-      ${isEdit ? `<button class="btn btn-ghost" id="s-run-btn" data-sid="${siteId}">
-        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Run now
-      </button>` : ''}
-      <button class="btn btn-primary" id="s-save">${isEdit ? 'Save changes' : 'Add site'}</button>
+    <div class="mact">
+      <button class="btn btn-g" id="s-cancel">Cancel</button>
+      ${isEdit?`<button class="btn btn-g" id="s-run">&#9654; Run now</button>`:''}
+      <button class="btn btn-p" id="s-save">${isEdit?'Save changes':'Add site'}</button>
     </div>
   `);
+  hookTabs();
 
-  // Tab switching
-  const tabs = document.querySelectorAll('.modal-tab');
-  const panels = [0,1,2].map(i => document.getElementById(`tab-${i}`));
-  tabSwitch([...tabs], panels);
-
-  // Live queue preview
-  const refreshQ = () => {
-    const ta = document.getElementById('s-topics');
-    const qp = document.getElementById('s-qpreview');
-    if (!ta || !qp) return;
-    const topics = ta.value.trim().split('\n').filter(Boolean);
-    const freq = document.getElementById('s-freq')?.value || 'daily';
-    const h = parseInt(document.getElementById('s-hour')?.value) || 7;
-    const m = parseInt(document.getElementById('s-min')?.value) || 0;
-    const startIdx = isEdit ? (site.topic_idx || 0) : 0;
-    qp.innerHTML = buildQPreview(topics, freq, h, m, startIdx);
+  // ── Pillar tab setup ──
+  const initPillars=()=>{
+    const store=document.getElementById('s-pillar-store');
+    let pages=[];try{pages=JSON.parse(store?.value||'[]');}catch(e){}
+    const refresh=()=>{
+      const container=document.getElementById('s-pillars');
+      const empty=document.getElementById('s-pillar-empty');
+      if(container)container.innerHTML=renderPillarRows(pages);
+      if(empty)empty.style.display=pages.length?'none':'block';
+      if(store)store.value=JSON.stringify(pages);
+      document.querySelectorAll('[data-del-pillar]').forEach(btn=>{
+        btn.onclick=()=>{pages.splice(parseInt(btn.dataset.delPillar),1);refresh();};
+      });
+    };
+    refresh();
+    const addBtn=document.getElementById('s-add-pillar');
+    if(addBtn)addBtn.onclick=()=>{openPillarEntryModal(newPage=>{pages.push(newPage);refresh();});};
   };
-  document.getElementById('s-topics')?.addEventListener('input', refreshQ);
+  initPillars();
 
-  document.getElementById('s-cancel').onclick = closeModal;
+  const refreshQ=()=>{
+    const ta=document.getElementById('s-topics');const qp=document.getElementById('s-qp');if(!ta||!qp)return;
+    qp.innerHTML=qPrev(ta.value.trim().split('\n').filter(Boolean),document.getElementById('s-freq')?.value||'daily',
+      parseInt(document.getElementById('s-h')?.value)||7,parseInt(document.getElementById('s-m')?.value)||0,isEdit?site.topic_idx||0:0);
+  };
+  document.getElementById('s-topics')?.addEventListener('input',refreshQ);
 
-  if (isEdit) {
-    document.getElementById('s-delete').onclick = () => {
-      if (confirm(`Remove ${site.name}? This cannot be undone.`)) {
-        S.sites = S.sites.filter(s => s.id !== siteId);
-        S.posts = S.posts.filter(p => p.siteId !== siteId);
-        if (S.activeSite === siteId) S.activeSite = null;
-        buildSchedule(); saveState(); closeModal(); render();
-        toast(`${site.name} removed`, 'info');
+  // connection test
+  document.getElementById('s-test').onclick=async()=>{
+    const btn=document.getElementById('s-test');const res=document.getElementById('s-conn-result');
+    const ts={wpUrl:document.getElementById('s-wp').value.trim(),wpUser:document.getElementById('s-wpu').value.trim()||'admin',wpPass:document.getElementById('s-wpp').value||(isEdit?site.wpPass:'')};
+    if(!ts.wpUrl||!ts.wpPass){res.innerHTML=`<div class="conn-row" style="margin-bottom:8px">⚠ Enter WP URL and app password first</div>`;return;}
+    btn.disabled=true;btn.textContent='Testing…';res.innerHTML='';
+    try{
+      const name=await testWP(ts);
+      res.innerHTML=`<div class="conn-row" style="border-color:#86efac;background:var(--gbg);color:var(--gtx);margin-bottom:8px">✅ Connected as <strong>${esc(name)}</strong></div>`;
+    }catch(e){
+      res.innerHTML=`<div class="conn-row" style="border-color:#fca5a5;background:var(--rbg);color:var(--rtx);margin-bottom:8px">❌ ${esc(e.message)}</div>`;
+    }
+    btn.disabled=false;btn.textContent='✓ Test WordPress connection';
+  };
+
+  document.getElementById('s-cancel').onclick=closeModal;
+  if(isEdit){
+    document.getElementById('s-del').onclick=()=>{
+      if(confirm(`Remove ${site.name}?`)){
+        S.sites=S.sites.filter(s=>s.id!==siteId);S.posts=S.posts.filter(p=>p.siteId!==siteId);
+        if(S.activeSite===siteId)S.activeSite=null;
+        buildSchedule();save();closeModal();render();toast(`${site.name} removed`,'info');
       }
     };
-
-    document.getElementById('s-run-btn').onclick = () => {
-      closeModal();
-      openRunModal(siteId);
-    };
+    document.getElementById('s-run').onclick=()=>{closeModal();openRunModal(siteId);};
   }
-
-  document.getElementById('s-save').onclick = () => {
-    const name = document.getElementById('s-name').value.trim();
-    if (!name) { toast('Site name is required', 'err'); return; }
-    const topics = (document.getElementById('s-topics')?.value || '').trim().split('\n').filter(Boolean);
-
-    const data = {
-      name,
-      url: document.getElementById('s-url').value.trim(),
-      wpUrl: document.getElementById('s-wp').value.trim(),
-      wpUser: document.getElementById('s-wpu').value.trim() || 'admin',
-      wpPass: document.getElementById('s-wpp').value || (isEdit ? site.wpPass : ''),
-      category: document.getElementById('s-cat').value.trim() || 'Blog',
-      freq: document.getElementById('s-freq').value,
-      schedHour: parseInt(document.getElementById('s-hour').value) || 7,
-      schedMin: parseInt(document.getElementById('s-min').value) || 0,
-      topics: topics.length ? topics : (isEdit ? site.topics : ['New post']),
-      description: document.getElementById('s-desc')?.value.trim() || '',
-      audience: document.getElementById('s-aud')?.value.trim() || '',
-      tone: document.getElementById('s-tone')?.value.trim() || '',
-      niche: document.getElementById('s-niche')?.value.trim() || '',
-      usp: document.getElementById('s-usp')?.value.trim() || '',
+  document.getElementById('s-save').onclick=()=>{
+    const name=document.getElementById('s-name').value.trim();if(!name){toast('Name required','err');return;}
+    const topics=(document.getElementById('s-topics')?.value||'').trim().split('\n').filter(Boolean);
+    let pillarPages=[];try{pillarPages=JSON.parse(document.getElementById('s-pillar-store')?.value||'[]');}catch(e){}
+    const d={name,url:document.getElementById('s-url').value.trim(),
+      wpUrl:document.getElementById('s-wp').value.trim(),wpUser:document.getElementById('s-wpu').value.trim()||'admin',
+      wpPass:document.getElementById('s-wpp').value||(isEdit?site.wpPass:''),
+      category:document.getElementById('s-cat').value.trim()||'Blog',
+      freq:document.getElementById('s-freq').value,
+      schedHour:parseInt(document.getElementById('s-h').value)||7,schedMin:parseInt(document.getElementById('s-m').value)||0,
+      topics:topics.length?topics:(isEdit?site.topics:['New post']),
+      description:document.getElementById('s-desc')?.value.trim()||'',
+      audience:document.getElementById('s-aud')?.value.trim()||'',
+      tone:document.getElementById('s-tone')?.value.trim()||'',
+      niche:document.getElementById('s-niche')?.value.trim()||'',
+      usp:document.getElementById('s-usp')?.value.trim()||'',
+      sitemapUrl:document.getElementById('s-sitemap')?.value.trim()||'',
+      pillarPages,
     };
-
-    if (isEdit) {
-      const idx = siteIdx(siteId);
-      S.sites[idx] = { ...site, ...data };
-    } else {
-      S.sites.push({ id: 's' + Date.now(), topic_idx: 0, ...data });
-    }
-
-    buildSchedule(); saveState(); closeModal(); render();
-    toast(isEdit ? `${name} updated` : `${name} added`, 'ok');
+    if(isEdit){const idx=sI(siteId);S.sites[idx]={...site,...d};}
+    else S.sites.push({id:'s'+Date.now(),topic_idx:0,...d});
+    buildSchedule();save();closeModal();render();toast(isEdit?`${name} updated`:`${name} added`,'ok');
   };
 }
 
-// ── Run Modal ──
-function openRunModal(siteId) {
-  const site = S.sites.find(s => s.id === siteId);
-  if (!site) return;
-
-  const topic = (site.topics || [])[site.topic_idx || 0] || '(no topic)';
-
+// ─── RUN MODAL ────────────────────────────────────────────────────────
+function openRunModal(siteId){
+  const site=S.sites.find(s=>s.id===siteId);if(!site)return;
+  const idx=site.topic_idx||0;
+  const topic=(site.topics||[])[idx%(site.topics?.length||1)]||'(no topic)';
   openModal(`
-    <div class="modal-title">Run — ${esc(site.name)}</div>
-    <div style="font-size:13px;color:var(--text-2);margin-bottom:12px">
-      Publishing topic <strong>${(site.topic_idx || 0) + 1}/${site.topics?.length || 0}</strong>:
+    <div class="mtitle">Publish — ${esc(site.name)}</div>
+    <div style="display:grid;grid-template-columns:52px 1fr;gap:6px 12px;margin-bottom:14px;align-items:center">
+      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3)">Topic</div>
+      <div style="font-size:13px;font-weight:500;padding:8px 11px;background:var(--gray);border-radius:var(--r)">${esc(topic)}</div>
+      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3)">Title</div>
+      <div style="font-size:12px;font-style:italic;color:var(--t3);padding:8px 11px;background:var(--gray);border-radius:var(--r)">Generated by Claude at publish time</div>
     </div>
-    <div style="font-size:14px;font-weight:500;color:var(--text);padding:10px 14px;background:var(--gray-bg);border-radius:var(--radius);margin-bottom:14px">${esc(topic)}</div>
-    <div class="progress-bar"><div class="progress-fill" id="run-progress" style="width:0%"></div></div>
-    <div class="log-panel" id="run-log"><div class="log-line"><span class="log-time">--:--:--</span><span class="log-info">Ready to publish…</span></div></div>
-    <div class="modal-actions" style="margin-top:16px">
-      <button class="btn btn-ghost" id="run-close">Close</button>
-      <button class="btn btn-primary" id="run-start">
-        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Publish now
-      </button>
+    <div style="font-size:11px;color:var(--t3);margin-bottom:10px">Topic <strong>#${idx+1}</strong> of ${site.topics?.length||0}</div>
+    <div class="pbar"><div class="pfill" id="rp" style="width:0%"></div></div>
+    <div class="logp" id="rlog"><div class="ll"><span class="lts">--:--:--</span><span class="li">Ready…</span></div></div>
+    <div class="mact" style="margin-top:14px">
+      <button class="btn btn-g" id="r-close">Close</button>
+      <button class="btn btn-p" id="r-start">&#9654; Publish now</button>
     </div>
   `);
-
-  document.getElementById('run-close').onclick = closeModal;
-
-  document.getElementById('run-start').onclick = async () => {
-    const btn = document.getElementById('run-start');
-    btn.disabled = true;
-    btn.textContent = 'Publishing…';
-
-    const log = document.getElementById('run-log');
-    const progress = document.getElementById('run-progress');
-    let pct = 0;
-
-    const addLog = (msg, type = 'info') => {
-      const t = new Date().toTimeString().slice(0,8);
-      log.innerHTML += `<div class="log-line"><span class="log-time">${t}</span><span class="log-${type}">${esc(msg)}</span></div>`;
-      log.scrollTop = log.scrollHeight;
-    };
-
-    const setProgress = p => { pct = p; if (progress) progress.style.width = p + '%'; };
-
-    try {
-      setProgress(10);
-      addLog(`Starting: ${topic}`, 'info');
-      setProgress(20);
-      const url = await runSite(site, addLog);
-      setProgress(100);
-      addLog(`Done! Published at ${url}`, 'ok');
-      btn.textContent = '✓ Published';
-      render(); // refresh calendar
-      toast(`${site.name} published successfully`, 'ok');
-    } catch(e) {
-      addLog(`Failed: ${e.message}`, 'err');
-      btn.disabled = false;
-      btn.textContent = 'Retry';
-      toast(`Publish failed: ${e.message}`, 'err');
-    }
+  document.getElementById('r-close').onclick=closeModal;
+  document.getElementById('r-start').onclick=async()=>{
+    const btn=document.getElementById('r-start');btn.disabled=true;btn.textContent='Publishing…';
+    const L=(m,c)=>addLog('rlog',m,c);setP('rp',10);
+    try{
+      const url=await runSite(site,L);setP('rp',100);L(`✓ Live: ${url}`,'lok');
+      btn.textContent='✓ Published';render();toast(`${site.name} published!`,'ok');
+    }catch(e){L(`✗ ${e.message}`,'le');btn.disabled=false;btn.textContent='Retry';toast(`Failed: ${e.message}`,'err');}
   };
 }
 
-// ── Run All Modal ──
-function openRunAllModal() {
-  const activeSites = S.sites.filter(s => s.wpUrl && s.wpPass);
-  if (!activeSites.length) {
-    toast('No sites have WordPress credentials configured', 'err');
-    return;
-  }
-
-  const siteRows = activeSites.map((s, i) => `
-    <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
-      <div class="site-dot" style="background:${siteColor(siteIdx(s.id))}"></div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:500">${esc(s.name)}</div>
-        <div style="font-size:11px;color:var(--text-3)">${esc((s.topics || [])[(s.topic_idx||0) % (s.topics?.length||1)] || '—')}</div>
-      </div>
-      <span class="badge badge-scheduled" id="run-status-${s.id}">queued</span>
+// ─── RUN ALL MODAL ────────────────────────────────────────────────────
+function openRunAllModal(){
+  const targets=S.sites.filter(s=>s.wpUrl&&s.wpPass);
+  if(!targets.length){toast('No sites have WordPress credentials','err');return;}
+  const rows=targets.map(s=>`<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border)">
+    <div class="sdot" style="background:${C(sI(s.id))}"></div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:12px;font-weight:500">${esc(s.name)}</div>
+      <div style="font-size:10px;color:var(--t3)">Topic: ${esc((s.topics||[])[(s.topic_idx||0)%(s.topics?.length||1)]||'—')}</div>
+      <div style="font-size:10px;font-style:italic;color:var(--t3)">Title: generated by Claude</div>
     </div>
-  `).join('');
-
+    <span class="badge b-sch" id="ras-${s.id}">queued</span>
+  </div>`).join('');
   openModal(`
-    <div class="modal-title">Run all sites</div>
-    <div style="font-size:12px;color:var(--text-2);margin-bottom:12px">Publishes each site's next topic in sequence. Sites without WordPress credentials are skipped.</div>
-    <div style="margin-bottom:14px">${siteRows}</div>
-    <div class="progress-bar"><div class="progress-fill" id="runall-progress" style="width:0%"></div></div>
-    <div class="log-panel" id="runall-log" style="max-height:160px"><div class="log-line"><span class="log-time">--:--:--</span><span class="log-info">Ready</span></div></div>
-    <div class="modal-actions" style="margin-top:16px">
-      <button class="btn btn-ghost" id="runall-close">Close</button>
-      <button class="btn btn-primary" id="runall-start">
-        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Run all
-      </button>
+    <div class="mtitle">Run all sites</div>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:12px">Publishes each site's next topic in sequence with 30s gap between sites to stagger API calls.</div>
+    <div style="margin-bottom:12px">${rows}</div>
+    <div class="pbar"><div class="pfill" id="rap" style="width:0%"></div></div>
+    <div class="logp" id="ralog" style="max-height:150px"><div class="ll"><span class="lts">--:--:--</span><span class="li">Ready</span></div></div>
+    <div class="mact" style="margin-top:14px">
+      <button class="btn btn-g" id="ra-close">Close</button>
+      <button class="btn btn-p" id="ra-start">&#9654; Run all</button>
     </div>
   `);
-
-  document.getElementById('runall-close').onclick = closeModal;
-
-  document.getElementById('runall-start').onclick = async () => {
-    const btn = document.getElementById('runall-start');
-    btn.disabled = true;
-
-    const log = document.getElementById('runall-log');
-    const progress = document.getElementById('runall-progress');
-
-    const addLog = (msg, type = 'info') => {
-      const t = new Date().toTimeString().slice(0,8);
-      log.innerHTML += `<div class="log-line"><span class="log-time">${t}</span><span class="log-${type}">${esc(msg)}</span></div>`;
-      log.scrollTop = log.scrollHeight;
-    };
-
-    let done = 0;
-    for (const site of activeSites) {
-      const badge = document.getElementById(`run-status-${site.id}`);
-      if (badge) { badge.className = 'badge badge-running'; badge.textContent = 'running'; }
-      addLog(`━━ ${site.name} ━━`, 'info');
-
-      try {
-        await runSite(site, addLog);
-        if (badge) { badge.className = 'badge badge-published'; badge.textContent = 'done'; }
-        addLog(`${site.name} complete`, 'ok');
-      } catch(e) {
-        if (badge) { badge.className = 'badge badge-failed'; badge.textContent = 'failed'; }
-        addLog(`${site.name} failed: ${e.message}`, 'err');
+  document.getElementById('ra-close').onclick=closeModal;
+  document.getElementById('ra-start').onclick=async()=>{
+    const btn=document.getElementById('ra-start');btn.disabled=true;
+    const L=(m,c)=>addLog('ralog',m,c);let done=0;
+    for(const site of targets){
+      const badge=document.getElementById(`ras-${site.id}`);
+      if(badge){badge.className='badge b-run';badge.textContent='running';}
+      L(`━━ ${site.name} ━━`,'li');
+      try{
+        await runSite(site,L);
+        if(badge){badge.className='badge b-pub';badge.textContent='done';}
+      }catch(e){
+        if(badge){badge.className='badge b-fai';badge.textContent='failed';}
+        L(`✗ ${e.message}`,'le');
       }
-
-      done++;
-      if (progress) progress.style.width = Math.round((done / activeSites.length) * 100) + '%';
-
-      // 30-second gap between sites in "run all" to stagger API calls
-      if (done < activeSites.length) {
-        addLog('Waiting 30s before next site…', 'info');
-        await new Promise(r => setTimeout(r, 30000));
-      }
+      done++;setP('rap',Math.round(done/targets.length*100));
+      if(done<targets.length){L('Waiting 30s before next site…','lw');await new Promise(r=>setTimeout(r,30000));}
     }
-
-    btn.textContent = '✓ All done';
-    render();
-    toast('All sites processed', 'ok');
+    btn.textContent='✓ All done';render();toast('All sites processed','ok');
   };
 }
 
-// ── Add Post Modal ──
-function openAddPostModal() {
-  const now = new Date();
-  const ds = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-
+// ─── PUSH ARTICLE MODAL ───────────────────────────────────────────────
+function openPushModal(){
+  if(!S.sites.length){toast('Add a site first','err');return;}
+  const opts=S.sites.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
   openModal(`
-    <div class="modal-title">Add manual post</div>
-    <div class="field"><label>Site</label>
-      <select id="np-site">${S.sites.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
+    <div class="mtitle">&#9889; Push article</div>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:14px">Publish immediately to any site. The topic cursor is <strong>not</strong> advanced — your schedule stays intact. Great for testing or urgent posts.</div>
+    <div class="field"><label>Site</label><select id="pa-site">${opts}</select></div>
+    <div class="field"><label>Topic / subject area</label>
+      <input id="pa-topic" placeholder="e.g. how roofing contractors find leads in winter">
+      <div class="fhint">Claude generates an original title — just enter the subject area here.</div>
     </div>
-    <div class="field"><label>Topic / title</label><input id="np-topic" placeholder="Article topic or headline"></div>
-    <div class="field-row">
+    <div style="font-size:11px;font-weight:500;color:var(--t2);margin-bottom:6px">Or pick from queue:</div>
+    <div id="pa-queue"></div>
+    <div class="pbar" style="display:none" id="pa-pbar"><div class="pfill" id="pa-prog" style="width:0%"></div></div>
+    <div class="logp" style="display:none;max-height:150px" id="pa-log"></div>
+    <div class="mact">
+      <button class="btn btn-g" id="pa-close">Cancel</button>
+      <button class="btn btn-gn" id="pa-run">&#9889; Push now</button>
+    </div>
+  `);
+  const loadQ=()=>{
+    const siteId=document.getElementById('pa-site')?.value;
+    const site=S.sites.find(s=>s.id===siteId);
+    const qEl=document.getElementById('pa-queue');if(!qEl)return;
+    if(!site?.topics?.length){qEl.innerHTML='<div style="font-size:11px;color:var(--t3);margin-bottom:8px">No topics configured.</div>';return;}
+    const start=site.topic_idx||0;
+    const slice=site.topics.slice(start,start+5);
+    qEl.innerHTML=slice.map(t=>`<div class="ptopic-row" data-t="${esc(t)}"><div class="pradio"></div><div style="font-size:12px;flex:1">${esc(t)}</div></div>`).join('');
+    qEl.querySelectorAll('.ptopic-row').forEach(row=>{
+      row.addEventListener('click',()=>{
+        qEl.querySelectorAll('.ptopic-row').forEach(r=>r.classList.remove('sel'));
+        row.classList.add('sel');
+        const inp=document.getElementById('pa-topic');if(inp)inp.value=row.dataset.t;
+      });
+    });
+  };
+  document.getElementById('pa-site')?.addEventListener('change',loadQ);loadQ();
+  document.getElementById('pa-close').onclick=closeModal;
+  document.getElementById('pa-run').onclick=async()=>{
+    const siteId=document.getElementById('pa-site')?.value;
+    const topic=document.getElementById('pa-topic')?.value.trim();
+    const site=S.sites.find(s=>s.id===siteId);
+    if(!site){toast('Select a site','err');return;}
+    if(!topic){toast('Enter a topic','err');return;}
+    if(!site.wpUrl||!site.wpPass){toast('WordPress credentials missing for this site','err');return;}
+    const btn=document.getElementById('pa-run');btn.disabled=true;btn.textContent='Pushing…';
+    const logEl=document.getElementById('pa-log');const pbar=document.getElementById('pa-pbar');
+    if(logEl)logEl.style.display='';if(pbar)pbar.style.display='';setP('pa-prog',10);
+    const L=(m,c)=>addLog('pa-log',m,c);
+    try{
+      const url=await runSite(site,L,topic);
+      setP('pa-prog',100);L(`✓ Live: ${url}`,'lok');
+      btn.textContent='✓ Pushed';render();toast('Article pushed!','ok');
+    }catch(e){L(`✗ ${e.message}`,'le');btn.disabled=false;btn.textContent='&#9889; Retry';toast(`Push failed: ${e.message}`,'err');}
+  };
+}
+
+// ─── ADD POST MODAL ───────────────────────────────────────────────────
+function openAddPostModal(){
+  const now=new Date();
+  const ds=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  openModal(`
+    <div class="mtitle">Schedule placeholder</div>
+    <div style="font-size:12px;color:var(--t2);margin-bottom:12px">Adds a slot to the calendar. Use "Push article" to publish immediately.</div>
+    <div class="field"><label>Site</label><select id="np-site">${S.sites.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></div>
+    <div class="field"><label>Topic / subject</label><input id="np-topic" placeholder="Article topic area"></div>
+    <div class="frow">
       <div class="field"><label>Date</label><input id="np-date" type="date" value="${ds}"></div>
       <div class="field"><label>Time (UTC)</label>
         <div style="display:flex;gap:6px;align-items:center">
-          <input id="np-h" type="number" min="0" max="23" value="7" style="width:60px">
-          <span style="color:var(--text-3)">:</span>
-          <input id="np-m" type="number" min="0" max="59" step="15" value="0" style="width:60px">
+          <input id="np-h" type="number" min="0" max="23" value="7" style="width:58px">
+          <span style="color:var(--t3)">:</span>
+          <input id="np-m" type="number" min="0" max="59" step="15" value="0" style="width:58px">
         </div>
       </div>
     </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" id="np-cancel">Cancel</button>
-      <button class="btn btn-primary" id="np-save">Add post</button>
+    <div class="mact">
+      <button class="btn btn-g" id="np-cancel">Cancel</button>
+      <button class="btn btn-p" id="np-save">Add to calendar</button>
     </div>
   `);
-
-  document.getElementById('np-cancel').onclick = closeModal;
-  document.getElementById('np-save').onclick = () => {
-    const ds = document.getElementById('np-date').value;
-    if (!ds) return;
-    const dt = new Date(ds + 'T00:00:00');
-    dt.setHours(parseInt(document.getElementById('np-h').value)||7, parseInt(document.getElementById('np-m').value)||0, 0, 0);
-    S.posts.push({
-      id: 'manual_' + Date.now(),
-      siteId: document.getElementById('np-site').value,
-      topic: document.getElementById('np-topic').value || 'Untitled post',
-      date: dt, status: 'scheduled', manual: true,
-    });
-    saveState(); closeModal(); render();
-    toast('Post added', 'ok');
+  document.getElementById('np-cancel').onclick=closeModal;
+  document.getElementById('np-save').onclick=()=>{
+    const ds=document.getElementById('np-date').value;if(!ds)return;
+    const dt=new Date(ds+'T00:00:00');
+    dt.setHours(parseInt(document.getElementById('np-h').value)||7,parseInt(document.getElementById('np-m').value)||0,0,0);
+    S.posts.push({id:'m_'+Date.now(),siteId:document.getElementById('np-site').value,topic:document.getElementById('np-topic').value||'Untitled',title:null,date:dt,status:'scheduled',manual:true});
+    save();closeModal();render();toast('Added to calendar','ok');
   };
 }
 
-// ── Day Modal ──
-function openDayModal(day) {
-  const y = S.year, m = S.month;
-  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const dp = S.posts
-    .filter(p => p.date.getFullYear()===y && p.date.getMonth()===m && p.date.getDate()===day)
-    .sort((a,b) => a.date - b.date);
-
-  const rows = dp.map(p => {
-    const si = siteIdx(p.siteId);
-    const col = si >= 0 ? siteColor(si) : '#9a9a92';
-    const badgeClass = { scheduled:'badge-scheduled', published:'badge-published', draft:'badge-draft', failed:'badge-failed' }[p.status] || 'badge-draft';
-    return `<div class="day-post-row">
-      <div style="font-size:11px;color:var(--text-3);min-width:44px">${fmt12(p.date.getHours(), p.date.getMinutes())}</div>
-      <div class="site-dot" style="background:${col}"></div>
+// ─── DAY MODAL ────────────────────────────────────────────────────────
+function openDayModal(day){
+  const y=S.year,m=S.month;
+  const dp=S.posts.filter(p=>p.date.getFullYear()===y&&p.date.getMonth()===m&&p.date.getDate()===day).sort((a,b)=>a.date-b.date);
+  const rows=dp.map(p=>{
+    const idx=sI(p.siteId);const col=idx>=0?C(idx):'#9a9a92';
+    const bc={scheduled:'b-sch',published:'b-pub',draft:'b-dra',failed:'b-fai'}[p.status]||'b-dra';
+    return`<div class="day-row">
+      <div style="font-size:11px;color:var(--t3);min-width:44px;flex-shrink:0">${f12(p.date.getHours(),p.date.getMinutes())}</div>
+      <div class="sdot" style="background:${col};flex-shrink:0"></div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.topic)}</div>
-        <div style="font-size:11px;color:var(--text-3)">${esc(S.sites[si]?.name || '?')}</div>
+        ${p.title
+          ? `<div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${esc(p.title)}</div>
+             <div style="font-size:10px;color:var(--t3);margin-top:1px">Topic: ${esc(p.topic)}</div>`
+          : `<div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${esc(p.topic)}</div>
+             <div style="font-size:10px;font-style:italic;color:var(--t3);margin-top:1px">Title generated at publish</div>`
+        }
+        <div style="font-size:10px;color:var(--t3);margin-top:1px">${esc(S.sites[idx]?.name||'?')}</div>
       </div>
-      <span class="badge ${badgeClass}">${p.status}</span>
-      <button class="btn btn-ghost" style="padding:3px 8px" data-del-post="${p.id}">
-        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-      </button>
+      <span class="badge ${bc}" style="flex-shrink:0">${p.status}</span>
+      ${p.url?`<a href="${esc(p.url)}" target="_blank" class="btn btn-g" style="padding:2px 7px;font-size:10px;margin-left:4px;flex-shrink:0">View &#8599;</a>`:''}
+      <button class="btn btn-g" style="padding:2px 7px;font-size:10px;margin-left:3px;flex-shrink:0" data-ddel="${p.id}">✕</button>
     </div>`;
   }).join('');
-
   openModal(`
-    <div class="modal-title">${MONTHS[m]} ${day}</div>
-    ${dp.length ? rows : '<div style="color:var(--text-3);font-size:13px;padding:12px 0">No posts scheduled.</div>'}
-    <div class="modal-actions">
-      <button class="btn btn-ghost" id="day-close">Close</button>
-    </div>
+    <div class="mtitle">${MO[m]} ${day}</div>
+    ${dp.length?rows:'<div style="color:var(--t3);font-size:13px;padding:10px 0">No posts scheduled.</div>'}
+    <div class="mact"><button class="btn btn-g" id="day-close">Close</button></div>
   `);
-
-  document.getElementById('day-close').onclick = closeModal;
-  document.querySelectorAll('[data-del-post]').forEach(el => {
-    el.onclick = () => {
-      S.posts = S.posts.filter(p => p.id !== el.dataset.delPost);
-      saveState(); closeModal(); render();
-    };
+  document.getElementById('day-close').onclick=closeModal;
+  document.querySelectorAll('[data-ddel]').forEach(el=>{
+    el.onclick=()=>{S.posts=S.posts.filter(p=>p.id!==el.dataset.ddel);save();closeModal();render();};
   });
 }
 
-// ── Export/Import ──
-function exportConfig() {
-  const cfg = S.sites.map(s => ({
-    id: s.id, name: s.name, url: s.url,
-    wp_url: s.wpUrl, wp_username: s.wpUser, wp_app_password: s.wpPass,
-    category: s.category, freq: s.freq,
-    schedule_hour: s.schedHour, schedule_min: s.schedMin,
-    topic_idx: s.topic_idx || 0, topics: s.topics || [],
-    description: s.description || '', audience: s.audience || '',
-    tone: s.tone || '', niche: s.niche || '', usp: s.usp || '',
-    active: true, last_run: s.last_run || null,
-  }));
-  const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'sites_config.json';
-  a.click();
-  toast('Config exported', 'ok');
+// ─── EXPORT / IMPORT ──────────────────────────────────────────────────
+function exportConfig(){
+  const cfg=S.sites.map(s=>({id:s.id,name:s.name,url:s.url,wp_url:s.wpUrl,wp_username:s.wpUser,wp_app_password:s.wpPass,
+    category:s.category,freq:s.freq,schedule_hour:s.schedHour,schedule_min:s.schedMin,
+    topic_idx:s.topic_idx||0,topics:s.topics||[],description:s.description||'',audience:s.audience||'',
+    tone:s.tone||'',niche:s.niche||'',usp:s.usp||'',active:true,last_run:s.last_run||null}));
+  const blob=new Blob([JSON.stringify(cfg,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sites_config.json';a.click();
+  toast('Config exported','ok');
 }
-
-function importConfig() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json';
-  input.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      try {
-        const data = JSON.parse(ev.target.result);
-        let updated = 0;
-        data.forEach(sc => {
-          const existing = S.sites.find(s => s.id === sc.id || s.name === sc.name);
-          if (existing) {
-            existing.topic_idx = sc.topic_idx || 0;
-            existing.last_run = sc.last_run || null;
-            if (sc.wp_url) existing.wpUrl = sc.wp_url;
-            if (sc.wp_username) existing.wpUser = sc.wp_username;
-            if (sc.wp_app_password) existing.wpPass = sc.wp_app_password;
-            updated++;
-          }
+function importConfig(){
+  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=e=>{
+    const f=e.target.files[0];if(!f)return;
+    const r=new FileReader();r.onload=ev=>{
+      try{
+        const data=JSON.parse(ev.target.result);let n=0;
+        data.forEach(sc=>{
+          const ex=S.sites.find(s=>s.id===sc.id||s.name===sc.name);
+          if(ex){ex.topic_idx=sc.topic_idx||0;ex.last_run=sc.last_run||null;
+            if(sc.wp_url)ex.wpUrl=sc.wp_url;if(sc.wp_username)ex.wpUser=sc.wp_username;
+            if(sc.wp_app_password)ex.wpPass=sc.wp_app_password;n++;}
         });
-        buildSchedule(); saveState(); render();
-        toast(`Imported — ${updated} site(s) synced`, 'ok');
-      } catch(e) {
-        toast('Invalid JSON file', 'err');
-      }
-    };
-    reader.readAsText(file);
-  };
-  input.click();
+        buildSchedule();save();render();toast(`Imported — ${n} site(s) synced`,'ok');
+      }catch(e){toast('Invalid JSON file','err');}
+    };r.readAsText(f);
+  };inp.click();
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  EVENT HANDLERS
-// ═══════════════════════════════════════════════════════════════════
-function attachHandlers() {
-  const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
+// ─── HANDLERS ─────────────────────────────────────────────────────────
+function attachHandlers(){
+  const on=(id,fn)=>{const el=document.getElementById(id);if(el)el.addEventListener('click',fn);};
+  on('btn-prev',()=>{if(--S.month<0){S.month=11;S.year--;}render();});
+  on('btn-next',()=>{if(++S.month>11){S.month=0;S.year++;}render();});
+  on('btn-vcal',()=>{S.view='calendar';render();});
+  on('btn-vlist',()=>{S.view='list';render();});
+  on('btn-add-site',()=>openSiteModal());
+  on('btn-add-post',()=>openAddPostModal());
+  on('btn-keys',()=>openKeysModal());
+  on('btn-export',exportConfig);
+  on('btn-import',importConfig);
+  on('btn-run-all',openRunAllModal);
+  on('btn-push',openPushModal);
 
-  on('btn-prev', 'click', () => { if (--S.month < 0) { S.month = 11; S.year--; } render(); });
-  on('btn-next', 'click', () => { if (++S.month > 11) { S.month = 0; S.year++; } render(); });
-  on('btn-vcal', 'click', () => { S.view = 'calendar'; render(); });
-  on('btn-vlist', 'click', () => { S.view = 'list'; render(); });
-  on('btn-add-site', 'click', () => openSiteModal());
-  on('btn-add-post', 'click', () => openAddPostModal());
-  on('btn-api-key', 'click', () => openApiKeyModal());
-  on('btn-export-config', 'click', exportConfig);
-  on('btn-import-config', 'click', importConfig);
-  on('btn-run-all', 'click', openRunAllModal);
-
-  document.querySelectorAll('.site-row').forEach(el => {
-    el.addEventListener('click', () => {
-      const id = el.dataset.siteid;
-      S.activeSite = S.activeSite === id ? null : id;
-      render();
-    });
-    el.addEventListener('dblclick', () => openSiteModal(el.dataset.siteid));
+  document.querySelectorAll('.site-row').forEach(el=>{
+    el.addEventListener('click',()=>{const id=el.dataset.sid;S.activeSite=S.activeSite===id?null:id;render();});
+    el.addEventListener('dblclick',()=>openSiteModal(el.dataset.sid));
   });
-
-  document.querySelectorAll('.cal-cell[data-day]').forEach(el => {
-    el.addEventListener('click', () => openDayModal(parseInt(el.dataset.day)));
+  document.querySelectorAll('.ccell[data-day]').forEach(el=>{
+    el.addEventListener('click',()=>openDayModal(parseInt(el.dataset.day)));
   });
-
-  document.querySelectorAll('[data-del]').forEach(el => {
-    el.addEventListener('click', () => {
-      S.posts = S.posts.filter(p => p.id !== el.dataset.del);
-      saveState(); render();
-    });
+  document.querySelectorAll('[data-del]').forEach(el=>{
+    el.addEventListener('click',()=>{S.posts=S.posts.filter(p=>p.id!==el.dataset.del);save();render();});
   });
-
-  document.querySelectorAll('[data-retry]').forEach(el => {
-    el.addEventListener('click', () => {
-      const p = S.posts.find(q => q.id === el.dataset.retry);
-      if (p) p.status = 'scheduled';
-      saveState(); render();
-    });
+  document.querySelectorAll('[data-retry]').forEach(el=>{
+    el.addEventListener('click',()=>{const p=S.posts.find(q=>q.id===el.dataset.retry);if(p)p.status='scheduled';save();render();});
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════
-//  INIT
-// ═══════════════════════════════════════════════════════════════════
 render();
 </script>
 </body>
