@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Calendar</title>
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --border: #e4e4e0;
+    --border-strong: #c8c8c2;
+    --text: #1a1a18;
+    --text-2: #5a5a54;
+    --text-3: #9a9a92;
+    --accent: #2563eb;
+    --accent-bg: #eff6ff;
+    --accent-text: #1d4ed8;
+    --green-bg: #f0fdf4;
+    --green-text: #15803d;
+    --amber-bg: #fffbeb;
+    --amber-text: #92400e;
+    --red-bg: #fef2f2;
+    --red-text: #991b1b;
+    --gray-bg: #f4f4f2;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Mono', monospace;
+    --sidebar-w: 248px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── Layout ── */
+  .shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    grid-template-rows: auto 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .topbar-logo {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -.02em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .topbar-logo-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .topbar-spacer { flex: 1; }
+  .topbar-actions { display: flex; gap: 8px; align-items: center; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-bottom: 20px;
+  }
+  .sidebar-section { padding: 16px 16px 0; }
+  .sidebar-section + .sidebar-section { padding-top: 12px; }
+  .section-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 6px;
+  }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .stat-card {
+    background: var(--gray-bg);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+  }
+  .stat-val { font-size: 20px; font-weight: 600; line-height: 1; color: var(--text); }
+  .stat-lbl { font-size: 10px; color: var(--text-3); margin-top: 3px; }
+  .stat-card.danger .stat-val { color: #dc2626; }
+
+  /* Site list */
+  .site-list { display: flex; flex-direction: column; gap: 2px; }
+  .site-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid transparent;
+    transition: background .1s;
+  }
+  .site-row:hover { background: var(--gray-bg); }
+  .site-row.active { background: var(--accent-bg); border-color: #bfdbfe; }
+  .site-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .site-info { flex: 1; min-width: 0; }
+  .site-name { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .site-next { font-size: 11px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .site-badge { font-size: 10px; color: var(--text-3); flex-shrink: 0; }
+
+  /* Timing bars */
+  .timing-list { display: flex; flex-direction: column; gap: 6px; }
+  .timing-row { display: flex; align-items: center; gap: 8px; }
+  .timing-name { font-size: 11px; color: var(--text-2); min-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .timing-time { font-size: 10px; color: var(--text-3); min-width: 38px; }
+  .timing-bar { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .timing-fill { height: 100%; border-radius: 2px; }
+
+  .warn-pill {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; padding: 6px 10px;
+    background: var(--amber-bg); color: var(--amber-text);
+    border-radius: var(--radius); margin-top: 6px;
+  }
+  .add-site-btn {
+    margin: 8px 16px 0;
+    padding: 7px 0;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius);
+    background: none;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-3);
+    width: calc(100% - 32px);
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    transition: background .1s, color .1s;
+  }
+  .add-site-btn:hover { background: var(--gray-bg); color: var(--text-2); }
+
+  /* ── Main content ── */
+  .main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .main-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .month-nav { display: flex; align-items: center; gap: 6px; }
+  .month-nav button {
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: none;
+    cursor: pointer;
+    color: var(--text-2);
+    font-size: 14px;
+    line-height: 1;
+  }
+  .month-nav button:hover { background: var(--gray-bg); }
+  .month-label { font-size: 14px; font-weight: 600; min-width: 138px; text-align: center; }
+  .view-tabs { display: flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .view-tab {
+    padding: 5px 14px; font-size: 12px; cursor: pointer;
+    background: none; border: none; color: var(--text-3);
+    font-family: var(--font);
+  }
+  .view-tab:not(:last-child) { border-right: 1px solid var(--border); }
+  .view-tab.on { background: var(--text); color: #fff; font-weight: 500; }
+  .ml-auto { margin-left: auto; }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 6px 14px; border-radius: var(--radius);
+    font-size: 12px; font-family: var(--font);
+    cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+    font-weight: 500; transition: background .1s, opacity .1s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; border: none; }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-ghost { background: none; border: 1px solid var(--border-strong); color: var(--text-2); }
+  .btn-ghost:hover { background: var(--gray-bg); }
+  .btn-danger { background: none; border: 1px solid #fca5a5; color: #dc2626; }
+  .btn-danger:hover { background: var(--red-bg); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── Calendar ── */
+  .cal-wrap { padding: 14px 16px; flex: 1; overflow-y: auto; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-dow { font-size: 10px; font-weight: 600; text-align: center; color: var(--text-3); padding: 4px 0; text-transform: uppercase; letter-spacing: .05em; }
+  .cal-cell {
+    min-height: 78px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 5px 6px;
+    cursor: pointer;
+    background: var(--surface);
+    transition: border-color .12s;
+  }
+  .cal-cell:hover { border-color: var(--border-strong); }
+  .cal-cell.today { border-color: var(--accent); }
+  .cal-cell.other-month { background: var(--gray-bg); opacity: .5; cursor: default; }
+  .cal-day-num {
+    font-size: 11px; color: var(--text-3); margin-bottom: 4px;
+    display: flex; align-items: center; justify-content: flex-start;
+  }
+  .today .cal-day-num span {
+    background: var(--accent); color: #fff;
+    border-radius: 50%; width: 18px; height: 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600;
+  }
+  .cal-pill {
+    font-size: 9px; padding: 2px 5px; border-radius: 4px;
+    margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-weight: 500; line-height: 1.35;
+  }
+  .cal-more { font-size: 9px; color: var(--text-3); }
+
+  /* ── List view ── */
+  .list-wrap { padding: 14px 16px; flex: 1; overflow-y: auto; }
+  .list-header {
+    display: grid; grid-template-columns: 96px 1fr 96px 80px 80px;
+    gap: 10px; padding: 6px 12px;
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--text-3);
+    background: var(--gray-bg); border-radius: var(--radius);
+    margin-bottom: 6px;
+  }
+  .list-row {
+    display: grid; grid-template-columns: 96px 1fr 96px 80px 80px;
+    gap: 10px; align-items: center;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    margin-bottom: 4px;
+    transition: border-color .1s;
+  }
+  .list-row:hover { border-color: var(--border-strong); }
+  .list-date { font-size: 12px; color: var(--text-2); }
+  .list-time { font-size: 10px; color: var(--text-3); }
+  .list-topic { font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list-site { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-2); overflow: hidden; }
+  .list-site-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list-actions { display: flex; gap: 4px; justify-content: flex-end; }
+
+  /* Status badges */
+  .badge {
+    display: inline-block; font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 20px;
+  }
+  .badge-scheduled { background: var(--accent-bg); color: var(--accent-text); }
+  .badge-published { background: var(--green-bg); color: var(--green-text); }
+  .badge-draft { background: var(--gray-bg); color: var(--text-3); }
+  .badge-failed { background: var(--red-bg); color: var(--red-text); }
+  .badge-running { background: var(--amber-bg); color: var(--amber-text); }
+
+  /* ── Modals ── */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding-top: 60px; z-index: 200;
+  }
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border);
+    width: 500px; max-width: calc(100vw - 40px);
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    padding: 24px;
+  }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+  .modal-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .modal-tab {
+    font-size: 12px; font-weight: 500; padding: 7px 16px;
+    cursor: pointer; color: var(--text-3);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    background: none; border-top: none; border-left: none; border-right: none;
+    font-family: var(--font);
+  }
+  .modal-tab.on { color: var(--text); border-bottom-color: var(--accent); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+  /* Form fields */
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 11px; font-weight: 500; color: var(--text-2); margin-bottom: 4px; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 7px 10px;
+    border: 1px solid var(--border-strong); border-radius: var(--radius);
+    background: var(--surface); color: var(--text);
+    font-size: 13px; font-family: var(--font);
+    transition: border-color .15s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+  }
+  .field textarea { resize: vertical; min-height: 88px; line-height: 1.55; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .field-hint { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
+  /* Queue preview */
+  .queue-preview {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    max-height: 140px; overflow-y: auto;
+    background: var(--gray-bg); padding: 8px 10px;
+  }
+  .qrow { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--border); font-size: 11px; }
+  .qrow:last-child { border-bottom: none; }
+  .qdate { color: var(--text-3); min-width: 52px; flex-shrink: 0; }
+  .qtopic { color: var(--text); }
+
+  /* Log panel */
+  .log-panel {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: #0f172a; padding: 12px 14px;
+    max-height: 220px; overflow-y: auto;
+    font-family: var(--font-mono); font-size: 11px; line-height: 1.7;
+  }
+  .log-line { display: flex; gap: 10px; }
+  .log-time { color: #64748b; flex-shrink: 0; }
+  .log-info { color: #94a3b8; }
+  .log-ok { color: #4ade80; }
+  .log-err { color: #f87171; }
+  .log-warn { color: #fbbf24; }
+
+  /* Toast */
+  .toast-wrap {
+    position: fixed; bottom: 24px; right: 24px;
+    display: flex; flex-direction: column; gap: 8px; z-index: 500;
+  }
+  .toast {
+    padding: 10px 16px; border-radius: var(--radius);
+    font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px;
+    animation: slide-in .2s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,.12);
+  }
+  .toast-ok { background: var(--green-bg); color: var(--green-text); border: 1px solid #bbf7d0; }
+  .toast-err { background: var(--red-bg); color: var(--red-text); border: 1px solid #fecaca; }
+  .toast-info { background: var(--accent-bg); color: var(--accent-text); border: 1px solid #bfdbfe; }
+  @keyframes slide-in { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* API key setup */
+  .setup-banner {
+    background: var(--amber-bg);
+    border: 1px solid #fde68a;
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; color: var(--amber-text);
+    margin: 12px 16px 0;
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    height: 3px; background: var(--border); border-radius: 2px; overflow: hidden;
+    margin: 8px 0;
+  }
+  .progress-fill {
+    height: 100%; background: var(--accent); border-radius: 2px;
+    transition: width .3s ease;
+  }
+
+  /* Day modal posts */
+  .day-post-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 0; border-bottom: 1px solid var(--border);
+  }
+  .day-post-row:last-child { border-bottom: none; }
+
+  .empty-state {
+    text-align: center; padding: 48px 20px; color: var(--text-3);
+  }
+  .empty-state svg { margin-bottom: 12px; opacity: .35; }
+
+  /* Monospace API key display */
+  .api-key-input { font-family: var(--font-mono) !important; font-size: 12px !important; letter-spacing: .03em; }
+</style>
+</head>
+<body>
+
+<div class="shell" id="app"></div>
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════
+const COLORS = ['#2563eb','#059669','#dc2626','#9333ea','#ea580c','#0891b2'];
+const PILL_BG = ['#eff6ff','#f0fdf4','#fef2f2','#faf5ff','#fff7ed','#ecfeff'];
+const PILL_TX = ['#1d4ed8','#15803d','#991b1b','#7e22ce','#c2410c','#0e7490'];
+
+const STORAGE_KEY = 'content_cal_v1';
+
+const DEMO_TOPICS_1 = `how to find local business leads
+how to build a B2B prospect list
+local business prospecting tips
+how to find small business contact information
+best ways to get business leads without a subscription
+how insurance agents find new clients
+real estate prospecting by zip code
+roofing contractor leads by zip code
+how to find HVAC contractor contact info
+ZoomInfo alternatives for local sales reps
+cold outreach tips for local businesses
+sales territory mapping by zip code
+how to prioritize leads by Google rating
+Google Maps lead generation tools compared`;
+
+const DEMO_TOPICS_2 = `finance news daily roundup
+stock market momentum analysis
+crypto market update
+fed reserve policy watch
+earnings season preview
+investment strategy for retail traders
+economic indicators explained
+options trading basics
+ETF investing guide
+sector rotation strategy`;
+
+function defaultState() {
+  return {
+    apiKey: '',
+    sites: [
+      { id: 's1', name: 'BizInZip', url: 'bizinzip.com',
+        wpUrl: '', wpUser: 'admin', wpPass: '',
+        category: 'Blog', freq: 'daily', schedHour: 7, schedMin: 0,
+        topic_idx: 0, topics: DEMO_TOPICS_1.trim().split('\n'),
+        description: 'BizInZip is a pay-as-you-go local business lead finder.',
+        audience: 'insurance agents, real estate brokers, sales reps',
+        tone: 'practical, direct, results-focused',
+        niche: 'local B2B lead generation',
+        usp: 'search free, pay $0.10 per contact — no subscription',
+      },
+      { id: 's2', name: 'CallingMarkets', url: 'callingmarkets.com',
+        wpUrl: '', wpUser: 'admin', wpPass: '',
+        category: 'News', freq: 'daily', schedHour: 8, schedMin: 30,
+        topic_idx: 0, topics: DEMO_TOPICS_2.trim().split('\n'),
+        description: 'CallingMarkets is a momentum-based financial signals publication.',
+        audience: 'retail traders, crypto traders, long-term investors',
+        tone: 'balanced, analytical, like a sharp Bloomberg piece',
+        niche: 'finance and markets',
+        usp: 'momentum-based signals for retail traders',
+      },
+    ],
+    posts: [],
+    view: 'calendar',
+    activeSite: null,
+    year: new Date().getFullYear(),
+    month: new Date().getMonth(),
+    modal: null,
+  };
+}
+
+let S = loadState();
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Rehydrate dates
+      parsed.posts = (parsed.posts || []).map(p => ({ ...p, date: new Date(p.date) }));
+      return { ...defaultState(), ...parsed, modal: null };
+    }
+  } catch(e) {}
+  return defaultState();
+}
+
+function saveState() {
+  try {
+    const toSave = { ...S, modal: null };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SCHEDULE BUILDER
+// ═══════════════════════════════════════════════════════════════════
+function buildSchedule() {
+  const now = new Date();
+  const existing = S.posts.filter(p => p.manual);
+  const generated = [];
+
+  S.sites.forEach((site, si) => {
+    const topics = site.topics || [];
+    if (!topics.length) return;
+    let cursor = site.topic_idx || 0;
+
+    for (let d = 0; d < 60; d++) {
+      const show = site.freq === 'daily' ||
+        (site.freq === 'weekly' && d % 7 === 0) ||
+        (site.freq === 'biweekly' && d % 14 === 0);
+      if (!show) continue;
+
+      const dt = new Date(now);
+      dt.setDate(dt.getDate() + d);
+      dt.setHours(site.schedHour, site.schedMin, 0, 0);
+
+      const topic = topics[cursor % topics.length];
+      cursor++;
+
+      const past = dt < now;
+      generated.push({
+        id: `g_${site.id}_${d}`,
+        siteId: site.id,
+        topic,
+        date: new Date(dt),
+        status: past ? 'published' : 'scheduled',
+        manual: false,
+      });
+    }
+  });
+
+  S.posts = [...existing, ...generated];
+}
+
+buildSchedule();
+
+// ═══════════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════════
+const fmt12 = (h, m) => {
+  const ap = h >= 12 ? 'pm' : 'am';
+  const hh = h % 12 || 12;
+  return `${hh}:${String(m).padStart(2,'0')}${ap}`;
+};
+const fmtShort = d => {
+  const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${M[d.getMonth()]} ${d.getDate()}`;
+};
+const siteColor = i => COLORS[i % COLORS.length];
+const sitePillBg = i => PILL_BG[i % PILL_BG.length];
+const sitePillTx = i => PILL_TX[i % PILL_TX.length];
+const siteIdx = id => S.sites.findIndex(s => s.id === id);
+
+function suggestTime() {
+  const taken = S.sites.map(s => s.schedHour * 60 + s.schedMin);
+  let t = 7 * 60;
+  while (taken.some(h => Math.abs(h - t) < 30)) t += 30;
+  return { h: Math.floor(t / 60), m: t % 60 };
+}
+
+function checkOverlap() {
+  for (let i = 0; i < S.sites.length; i++) {
+    for (let j = i + 1; j < S.sites.length; j++) {
+      const diff = Math.abs(
+        (S.sites[i].schedHour * 60 + S.sites[i].schedMin) -
+        (S.sites[j].schedHour * 60 + S.sites[j].schedMin)
+      );
+      if (diff < 30) return `${S.sites[i].name} & ${S.sites[j].name} are within 30 min`;
+    }
+  }
+  return '';
+}
+
+function buildQPreview(topics, freq, h, m, startIdx = 0, count = 7) {
+  if (!topics || !topics.length) return '<div style="font-size:11px;color:var(--text-3);padding:4px 0">No topics entered yet</div>';
+  const now = new Date();
+  let lines = '';
+  let cursor = startIdx;
+  let d = 0, shown = 0;
+  while (shown < count && d < 90) {
+    const show = freq === 'daily' ||
+      (freq === 'weekly' && d % 7 === 0) ||
+      (freq === 'biweekly' && d % 14 === 0);
+    if (show) {
+      const dt = new Date(now);
+      dt.setDate(dt.getDate() + d);
+      lines += `<div class="qrow"><span class="qdate">${fmtShort(dt)}</span><span class="qtopic">${esc(topics[cursor % topics.length])}</span></div>`;
+      cursor++;
+      shown++;
+    }
+    d++;
+  }
+  return lines;
+}
+
+const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+// ═══════════════════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════════════════
+function toast(msg, type = 'ok') {
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  ANTHROPIC API
+// ═══════════════════════════════════════════════════════════════════
+async function callClaude(prompt, maxTokens = 2500) {
+  if (!S.apiKey) throw new Error('No Anthropic API key configured. Click the key icon in the top bar.');
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': S.apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `API error ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.content[0].text.trim();
+}
+
+async function writeArticle(topic, site) {
+  const today = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+  const prompt = `You are a content writer for ${site.name}, a ${site.niche || 'general'} website.
+
+TODAY: ${today}
+TOPIC: ${topic}
+
+ABOUT THE SITE:
+${site.description || `${site.name} serves ${site.audience || 'general readers'}.`}
+
+AUDIENCE: ${site.audience || 'general readers'}
+TONE: ${site.tone || 'helpful and informative'}
+${site.usp ? `USP (reference naturally where relevant): ${site.usp}` : ''}
+
+REQUIREMENTS:
+- Length: 650–900 words
+- SEO-optimised: use the topic as the primary keyword naturally throughout
+- Opening paragraph that hooks the reader immediately
+- Body paragraphs covering the topic thoroughly with actionable insights
+- Clear conclusion
+- HTML format: use <p> tags for paragraphs, <strong> for emphasis
+- No bullet lists, no markdown headers in the content field
+- Do NOT add disclaimers or "this is not advice" language
+
+Respond with ONLY a valid JSON object (no markdown fences, no preamble):
+{"title":"<SEO headline>","content":"<full article in HTML p tags>","excerpt":"<2-sentence meta description under 160 chars>","tags":["tag1","tag2","tag3"],"search_term":"<3-5 word Unsplash photo search term>"}`;
+
+  const text = await callClaude(prompt);
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('Could not parse article JSON from Claude response');
+  return JSON.parse(match[0]);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  WORDPRESS PUBLISHING
+// ═══════════════════════════════════════════════════════════════════
+async function publishToWP(site, article, logFn) {
+  const base = site.wpUrl.replace(/\/$/, '');
+  const creds = btoa(`${site.wpUser}:${site.wpPass}`);
+  const headers = {
+    'Authorization': `Basic ${creds}`,
+    'Content-Type': 'application/json',
+  };
+
+  // Get or create category
+  logFn('Finding WordPress category…', 'info');
+  let catId = null;
+  try {
+    const catRes = await fetch(`${base}/wp-json/wp/v2/categories?search=${encodeURIComponent(site.category)}&per_page=10`, { headers: { 'Authorization': `Basic ${creds}` } });
+    const cats = await catRes.json();
+    const found = cats.find(c => c.name.toLowerCase() === site.category.toLowerCase());
+    if (found) {
+      catId = found.id;
+    } else {
+      const create = await fetch(`${base}/wp-json/wp/v2/categories`, { method: 'POST', headers, body: JSON.stringify({ name: site.category }) });
+      const newCat = await create.json();
+      catId = newCat.id;
+      logFn(`Created category: ${site.category}`, 'ok');
+    }
+    logFn(`Category: ${site.category} (ID ${catId})`, 'ok');
+  } catch(e) {
+    logFn(`Category lookup failed: ${e.message}`, 'warn');
+  }
+
+  // Create post
+  logFn('Publishing post…', 'info');
+  const postData = {
+    title: article.title,
+    content: article.content,
+    excerpt: article.excerpt || '',
+    status: 'publish',
+    categories: catId ? [catId] : [],
+    comment_status: 'open',
+  };
+
+  const postRes = await fetch(`${base}/wp-json/wp/v2/posts`, {
+    method: 'POST', headers,
+    body: JSON.stringify(postData),
+  });
+
+  if (!postRes.ok) {
+    const err = await postRes.json().catch(() => ({}));
+    throw new Error(err?.message || `WordPress error ${postRes.status}`);
+  }
+
+  const post = await postRes.json();
+  logFn(`Published: ${post.link}`, 'ok');
+  return post.link;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RUN PIPELINE
+// ═══════════════════════════════════════════════════════════════════
+async function runSite(site, logFn) {
+  const topics = site.topics || [];
+  if (!topics.length) throw new Error('No topics configured for this site.');
+  if (!site.wpUrl || !site.wpUser || !site.wpPass) throw new Error('WordPress credentials not configured.');
+
+  const idx = site.topic_idx || 0;
+  const topic = topics[idx % topics.length];
+  logFn(`Topic: ${topic}`, 'info');
+
+  logFn('Writing article via Claude…', 'info');
+  const article = await writeArticle(topic, site);
+  logFn(`Title: ${article.title}`, 'ok');
+
+  const url = await publishToWP(site, article, logFn);
+
+  // Advance topic cursor
+  site.topic_idx = (idx + 1) % topics.length;
+  site.last_run = new Date().toISOString();
+
+  // Mark post as published in schedule
+  const todayStr = new Date().toDateString();
+  const sched = S.posts.find(p => p.siteId === site.id && p.date.toDateString() === todayStr && p.status === 'scheduled');
+  if (sched) sched.status = 'published';
+
+  buildSchedule();
+  saveState();
+
+  return url;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════════════════
+function render() {
+  const root = document.getElementById('app');
+  root.innerHTML = renderShell();
+  attachHandlers();
+}
+
+function renderShell() {
+  return `
+    ${renderTopbar()}
+    ${renderSidebar()}
+    ${renderMain()}
+  `;
+}
+
+function renderTopbar() {
+  const hasKey = !!S.apiKey;
+  return `<div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-logo-dot"></div>
+      Content Calendar
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost" id="btn-import-config" title="Import sites_config.json">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Import
+      </button>
+      <button class="btn btn-ghost" id="btn-export-config" title="Export sites_config.json">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Export
+      </button>
+      <button class="btn ${hasKey ? 'btn-ghost' : 'btn-primary'}" id="btn-api-key">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        ${hasKey ? 'API key ✓' : 'Set API key'}
+      </button>
+    </div>
+  </div>`;
+}
+
+function renderSidebar() {
+  const sch = S.posts.filter(p => p.status === 'scheduled').length;
+  const pub = S.posts.filter(p => p.status === 'published').length;
+  const fail = S.posts.filter(p => p.status === 'failed').length;
+  const topicCount = S.sites.reduce((a, s) => a + (s.topics?.length || 0), 0);
+  const overlap = checkOverlap();
+
+  const siteRows = S.sites.map((s, i) => {
+    const cnt = S.posts.filter(p => p.siteId === s.id && p.status === 'scheduled').length;
+    const next = s.topics?.[(s.topic_idx || 0) % (s.topics.length || 1)] || '—';
+    const active = S.activeSite === s.id ? 'active' : '';
+    return `<div class="site-row ${active}" data-siteid="${s.id}">
+      <div class="site-dot" style="background:${siteColor(i)}"></div>
+      <div class="site-info">
+        <div class="site-name">${esc(s.name)}</div>
+        <div class="site-next">${esc(next)}</div>
+      </div>
+      <span class="site-badge">${cnt}</span>
+    </div>`;
+  }).join('');
+
+  const timingRows = S.sites.map((s, i) => {
+    const pct = Math.round(((s.schedHour * 60 + s.schedMin) / (24 * 60)) * 100);
+    return `<div class="timing-row">
+      <div class="timing-name">${esc(s.name)}</div>
+      <div class="timing-time">${fmt12(s.schedHour, s.schedMin)}</div>
+      <div class="timing-bar"><div class="timing-fill" style="width:${Math.max(pct,4)}%;background:${siteColor(i)}"></div></div>
+    </div>`;
+  }).join('');
+
+  return `<div class="sidebar">
+    <div class="sidebar-section">
+      <div class="section-label">Overview</div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-val">${sch}</div><div class="stat-lbl">Scheduled</div></div>
+        <div class="stat-card"><div class="stat-val">${pub}</div><div class="stat-lbl">Published</div></div>
+        <div class="stat-card"><div class="stat-val">${topicCount}</div><div class="stat-lbl">Topics</div></div>
+        <div class="stat-card${fail ? ' danger' : ''}"><div class="stat-val">${fail}</div><div class="stat-lbl">Failed</div></div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">Sites</div>
+      <div class="site-list">${siteRows}</div>
+      <button class="add-site-btn" id="btn-add-site">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add site
+      </button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">API run order</div>
+      <div class="timing-list">${timingRows}</div>
+      ${overlap ? `<div class="warn-pill"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${overlap}</div>` : ''}
+    </div>
+
+    ${!S.apiKey ? `<div class="setup-banner">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Set your Anthropic API key to enable publishing.
+    </div>` : ''}
+  </div>`;
+}
+
+function renderMain() {
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return `<div class="main">
+    <div class="main-bar">
+      <div class="month-nav">
+        <button id="btn-prev">&#8249;</button>
+        <span class="month-label">${MONTHS[S.month]} ${S.year}</span>
+        <button id="btn-next">&#8250;</button>
+      </div>
+      <div class="view-tabs">
+        <button class="view-tab ${S.view === 'calendar' ? 'on' : ''}" id="btn-vcal">Calendar</button>
+        <button class="view-tab ${S.view === 'list' ? 'on' : ''}" id="btn-vlist">List</button>
+      </div>
+      <div class="ml-auto" style="display:flex;gap:8px">
+        <button class="btn btn-ghost" id="btn-run-all">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Run all sites
+        </button>
+        <button class="btn btn-primary" id="btn-add-post">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add post
+        </button>
+      </div>
+    </div>
+    ${S.view === 'calendar' ? renderCalendar() : renderList()}
+  </div>`;
+}
+
+function renderCalendar() {
+  const y = S.year, m = S.month;
+  const firstDay = new Date(y, m, 1).getDay();
+  const days = new Date(y, m + 1, 0).getDate();
+  const today = new Date();
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const posts = S.posts.filter(p => S.activeSite ? p.siteId === S.activeSite : true);
+  const byDay = {};
+  posts.forEach(p => {
+    if (p.date.getFullYear() === y && p.date.getMonth() === m) {
+      const k = p.date.getDate();
+      (byDay[k] = byDay[k] || []).push(p);
+    }
+  });
+
+  let cells = DAYS.map(d => `<div class="cal-dow">${d}</div>`).join('');
+  for (let i = 0; i < firstDay; i++) cells += `<div class="cal-cell other-month"></div>`;
+  for (let d = 1; d <= days; d++) {
+    const isToday = today.getFullYear() === y && today.getMonth() === m && today.getDate() === d;
+    const dp = byDay[d] || [];
+    const pills = dp.slice(0, 3).map(p => {
+      const si = siteIdx(p.siteId);
+      const bg = si >= 0 ? sitePillBg(si) : '#f4f4f2';
+      const tx = si >= 0 ? sitePillTx(si) : '#9a9a92';
+      const op = p.status === 'published' ? '.6' : '1';
+      return `<div class="cal-pill" style="background:${bg};color:${tx};opacity:${op}">${esc(p.topic)}</div>`;
+    }).join('');
+    const more = dp.length > 3 ? `<div class="cal-more">+${dp.length - 3} more</div>` : '';
+    cells += `<div class="cal-cell${isToday ? ' today' : ''}" data-day="${d}">
+      <div class="cal-day-num"><span>${d}</span></div>
+      ${pills}${more}
+    </div>`;
+  }
+
+  return `<div class="cal-wrap"><div class="cal-grid">${cells}</div></div>`;
+}
+
+function renderList() {
+  const posts = S.posts
+    .filter(p => S.activeSite ? p.siteId === S.activeSite : true)
+    .sort((a, b) => a.date - b.date);
+
+  if (!posts.length) {
+    return `<div class="list-wrap"><div class="empty-state">
+      <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <div>No posts found</div>
+    </div></div>`;
+  }
+
+  const rows = posts.map(p => {
+    const si = siteIdx(p.siteId);
+    const col = si >= 0 ? siteColor(si) : '#9a9a92';
+    const site = S.sites[si];
+    const badgeClass = { scheduled:'badge-scheduled', published:'badge-published', draft:'badge-draft', failed:'badge-failed', running:'badge-running' }[p.status] || 'badge-draft';
+    return `<div class="list-row">
+      <div><div class="list-date">${fmtShort(p.date)}</div><div class="list-time">${fmt12(p.date.getHours(), p.date.getMinutes())}</div></div>
+      <div class="list-topic">${esc(p.topic)}</div>
+      <div class="list-site"><div class="site-dot" style="background:${col};width:7px;height:7px"></div><span class="list-site-name">${esc(site?.name || '?')}</span></div>
+      <div><span class="badge ${badgeClass}">${p.status}</span></div>
+      <div class="list-actions">
+        ${p.status === 'failed' ? `<button class="btn btn-ghost" style="padding:3px 8px;font-size:11px" data-retry="${p.id}">Retry</button>` : ''}
+        <button class="btn btn-ghost" style="padding:3px 8px;font-size:11px" data-del="${p.id}">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="list-wrap">
+    <div class="list-header"><div>Date</div><div>Topic</div><div>Site</div><div>Status</div><div></div></div>
+    ${rows}
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MODALS
+// ═══════════════════════════════════════════════════════════════════
+let activeModal = null;
+
+function openModal(html) {
+  closeModal();
+  const bd = document.createElement('div');
+  bd.className = 'modal-backdrop';
+  bd.id = 'modal-backdrop';
+  bd.innerHTML = `<div class="modal">${html}</div>`;
+  bd.addEventListener('click', e => { if (e.target === bd) closeModal(); });
+  document.body.appendChild(bd);
+  activeModal = bd;
+}
+
+function closeModal() {
+  if (activeModal) { activeModal.remove(); activeModal = null; }
+  const old = document.getElementById('modal-backdrop');
+  if (old) old.remove();
+}
+
+function tabSwitch(tabs, panels) {
+  tabs.forEach((t, i) => {
+    t.addEventListener('click', () => {
+      tabs.forEach(x => x.classList.remove('on'));
+      panels.forEach(x => x.style.display = 'none');
+      t.classList.add('on');
+      panels[i].style.display = '';
+    });
+  });
+}
+
+// ── API Key Modal ──
+function openApiKeyModal() {
+  openModal(`
+    <div class="modal-title">Anthropic API key</div>
+    <div class="field">
+      <label>API key</label>
+      <input id="ak-input" type="password" class="api-key-input" placeholder="sk-ant-..." value="${esc(S.apiKey)}">
+      <div class="field-hint">Stored in your browser's localStorage only. Never sent anywhere except Anthropic's API.</div>
+    </div>
+    <div class="field">
+      <label>Model</label>
+      <input value="claude-sonnet-4-6" disabled style="opacity:.5">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="ak-cancel">Cancel</button>
+      <button class="btn btn-primary" id="ak-save">Save</button>
+    </div>
+  `);
+  document.getElementById('ak-cancel').onclick = closeModal;
+  document.getElementById('ak-save').onclick = () => {
+    S.apiKey = document.getElementById('ak-input').value.trim();
+    saveState(); closeModal(); render();
+    toast('API key saved', 'ok');
+  };
+}
+
+// ── Add/Edit Site Modal ──
+function openSiteModal(siteId = null) {
+  const site = siteId ? S.sites.find(s => s.id === siteId) : null;
+  const sg = suggestTime();
+  const isEdit = !!site;
+
+  openModal(`
+    <div class="modal-title">${isEdit ? `Edit — ${esc(site.name)}` : 'Add site'}</div>
+    <div class="modal-tabs">
+      <button class="modal-tab on" data-tab="0">Site info</button>
+      <button class="modal-tab" data-tab="1">WordPress</button>
+      <button class="modal-tab" data-tab="2">Topics &amp; context</button>
+    </div>
+
+    <div id="tab-0">
+      <div class="field"><label>Site name</label><input id="s-name" value="${esc(site?.name || '')}"></div>
+      <div class="field"><label>Domain</label><input id="s-url" value="${esc(site?.url || '')}" placeholder="myblog.com"></div>
+      <div class="field"><label>Post frequency</label>
+        <select id="s-freq">
+          <option value="daily" ${site?.freq==='daily'||!site?'selected':''}>Daily</option>
+          <option value="weekly" ${site?.freq==='weekly'?'selected':''}>Weekly</option>
+          <option value="biweekly" ${site?.freq==='biweekly'?'selected':''}>Biweekly</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Schedule time (UTC)${!isEdit ? ` — ${fmt12(sg.h, sg.m)} suggested to avoid overlap` : ''}</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="s-hour" type="number" min="0" max="23" value="${site?.schedHour ?? sg.h}" style="width:70px">
+          <span style="color:var(--text-3)">:</span>
+          <input id="s-min" type="number" min="0" max="59" step="15" value="${site?.schedMin ?? sg.m}" style="width:70px">
+        </div>
+      </div>
+      ${isEdit ? `<button class="btn btn-danger" id="s-delete" style="width:100%;justify-content:center;margin-top:4px">Remove site</button>` : ''}
+    </div>
+
+    <div id="tab-1" style="display:none">
+      <div class="field"><label>WordPress URL</label><input id="s-wp" value="${esc(site?.wpUrl || '')}" placeholder="https://myblog.com"></div>
+      <div class="field-row">
+        <div class="field"><label>Username</label><input id="s-wpu" value="${esc(site?.wpUser || 'admin')}"></div>
+        <div class="field"><label>App password</label><input id="s-wpp" type="password" placeholder="${isEdit && site?.wpPass ? '••••••••' : 'xxxx xxxx xxxx'}" value="${esc(site?.wpPass || '')}"></div>
+      </div>
+      <div class="field"><label>Category name</label><input id="s-cat" value="${esc(site?.category || 'Blog')}"></div>
+      <div class="field-hint" style="margin-top:4px">Generate an app password at WP Admin → Users → Profile → Application Passwords. Stored in localStorage only.</div>
+    </div>
+
+    <div id="tab-2" style="display:none">
+      <div class="field">
+        <label>Topics — one per line, published in order then loops${isEdit ? ` (${site.topics?.length || 0} loaded, on topic ${(site.topic_idx||0)+1})` : ''}</label>
+        <textarea id="s-topics" style="font-size:12px;line-height:1.6;min-height:100px">${esc((site?.topics || []).join('\n'))}</textarea>
+      </div>
+      <div class="field-hint" style="margin-bottom:6px">Schedule preview:</div>
+      <div class="queue-preview" id="s-qpreview">${buildQPreview(site?.topics || [], site?.freq || 'daily', site?.schedHour ?? sg.h, site?.schedMin ?? sg.m, site?.topic_idx || 0)}</div>
+      <div class="field" style="margin-top:12px"><label>Site description (for article prompts)</label><textarea id="s-desc">${esc(site?.description || '')}</textarea></div>
+      <div class="field-row">
+        <div class="field"><label>Audience</label><input id="s-aud" value="${esc(site?.audience || '')}" placeholder="sales reps, agents"></div>
+        <div class="field"><label>Tone</label><input id="s-tone" value="${esc(site?.tone || '')}" placeholder="practical and direct"></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Niche</label><input id="s-niche" value="${esc(site?.niche || '')}" placeholder="local B2B lead generation"></div>
+        <div class="field"><label>USP</label><input id="s-usp" value="${esc(site?.usp || '')}" placeholder="pay per contact, no subscription"></div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="s-cancel">Cancel</button>
+      ${isEdit ? `<button class="btn btn-ghost" id="s-run-btn" data-sid="${siteId}">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Run now
+      </button>` : ''}
+      <button class="btn btn-primary" id="s-save">${isEdit ? 'Save changes' : 'Add site'}</button>
+    </div>
+  `);
+
+  // Tab switching
+  const tabs = document.querySelectorAll('.modal-tab');
+  const panels = [0,1,2].map(i => document.getElementById(`tab-${i}`));
+  tabSwitch([...tabs], panels);
+
+  // Live queue preview
+  const refreshQ = () => {
+    const ta = document.getElementById('s-topics');
+    const qp = document.getElementById('s-qpreview');
+    if (!ta || !qp) return;
+    const topics = ta.value.trim().split('\n').filter(Boolean);
+    const freq = document.getElementById('s-freq')?.value || 'daily';
+    const h = parseInt(document.getElementById('s-hour')?.value) || 7;
+    const m = parseInt(document.getElementById('s-min')?.value) || 0;
+    const startIdx = isEdit ? (site.topic_idx || 0) : 0;
+    qp.innerHTML = buildQPreview(topics, freq, h, m, startIdx);
+  };
+  document.getElementById('s-topics')?.addEventListener('input', refreshQ);
+
+  document.getElementById('s-cancel').onclick = closeModal;
+
+  if (isEdit) {
+    document.getElementById('s-delete').onclick = () => {
+      if (confirm(`Remove ${site.name}? This cannot be undone.`)) {
+        S.sites = S.sites.filter(s => s.id !== siteId);
+        S.posts = S.posts.filter(p => p.siteId !== siteId);
+        if (S.activeSite === siteId) S.activeSite = null;
+        buildSchedule(); saveState(); closeModal(); render();
+        toast(`${site.name} removed`, 'info');
+      }
+    };
+
+    document.getElementById('s-run-btn').onclick = () => {
+      closeModal();
+      openRunModal(siteId);
+    };
+  }
+
+  document.getElementById('s-save').onclick = () => {
+    const name = document.getElementById('s-name').value.trim();
+    if (!name) { toast('Site name is required', 'err'); return; }
+    const topics = (document.getElementById('s-topics')?.value || '').trim().split('\n').filter(Boolean);
+
+    const data = {
+      name,
+      url: document.getElementById('s-url').value.trim(),
+      wpUrl: document.getElementById('s-wp').value.trim(),
+      wpUser: document.getElementById('s-wpu').value.trim() || 'admin',
+      wpPass: document.getElementById('s-wpp').value || (isEdit ? site.wpPass : ''),
+      category: document.getElementById('s-cat').value.trim() || 'Blog',
+      freq: document.getElementById('s-freq').value,
+      schedHour: parseInt(document.getElementById('s-hour').value) || 7,
+      schedMin: parseInt(document.getElementById('s-min').value) || 0,
+      topics: topics.length ? topics : (isEdit ? site.topics : ['New post']),
+      description: document.getElementById('s-desc')?.value.trim() || '',
+      audience: document.getElementById('s-aud')?.value.trim() || '',
+      tone: document.getElementById('s-tone')?.value.trim() || '',
+      niche: document.getElementById('s-niche')?.value.trim() || '',
+      usp: document.getElementById('s-usp')?.value.trim() || '',
+    };
+
+    if (isEdit) {
+      const idx = siteIdx(siteId);
+      S.sites[idx] = { ...site, ...data };
+    } else {
+      S.sites.push({ id: 's' + Date.now(), topic_idx: 0, ...data });
+    }
+
+    buildSchedule(); saveState(); closeModal(); render();
+    toast(isEdit ? `${name} updated` : `${name} added`, 'ok');
+  };
+}
+
+// ── Run Modal ──
+function openRunModal(siteId) {
+  const site = S.sites.find(s => s.id === siteId);
+  if (!site) return;
+
+  const topic = (site.topics || [])[site.topic_idx || 0] || '(no topic)';
+
+  openModal(`
+    <div class="modal-title">Run — ${esc(site.name)}</div>
+    <div style="font-size:13px;color:var(--text-2);margin-bottom:12px">
+      Publishing topic <strong>${(site.topic_idx || 0) + 1}/${site.topics?.length || 0}</strong>:
+    </div>
+    <div style="font-size:14px;font-weight:500;color:var(--text);padding:10px 14px;background:var(--gray-bg);border-radius:var(--radius);margin-bottom:14px">${esc(topic)}</div>
+    <div class="progress-bar"><div class="progress-fill" id="run-progress" style="width:0%"></div></div>
+    <div class="log-panel" id="run-log"><div class="log-line"><span class="log-time">--:--:--</span><span class="log-info">Ready to publish…</span></div></div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-ghost" id="run-close">Close</button>
+      <button class="btn btn-primary" id="run-start">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Publish now
+      </button>
+    </div>
+  `);
+
+  document.getElementById('run-close').onclick = closeModal;
+
+  document.getElementById('run-start').onclick = async () => {
+    const btn = document.getElementById('run-start');
+    btn.disabled = true;
+    btn.textContent = 'Publishing…';
+
+    const log = document.getElementById('run-log');
+    const progress = document.getElementById('run-progress');
+    let pct = 0;
+
+    const addLog = (msg, type = 'info') => {
+      const t = new Date().toTimeString().slice(0,8);
+      log.innerHTML += `<div class="log-line"><span class="log-time">${t}</span><span class="log-${type}">${esc(msg)}</span></div>`;
+      log.scrollTop = log.scrollHeight;
+    };
+
+    const setProgress = p => { pct = p; if (progress) progress.style.width = p + '%'; };
+
+    try {
+      setProgress(10);
+      addLog(`Starting: ${topic}`, 'info');
+      setProgress(20);
+      const url = await runSite(site, addLog);
+      setProgress(100);
+      addLog(`Done! Published at ${url}`, 'ok');
+      btn.textContent = '✓ Published';
+      render(); // refresh calendar
+      toast(`${site.name} published successfully`, 'ok');
+    } catch(e) {
+      addLog(`Failed: ${e.message}`, 'err');
+      btn.disabled = false;
+      btn.textContent = 'Retry';
+      toast(`Publish failed: ${e.message}`, 'err');
+    }
+  };
+}
+
+// ── Run All Modal ──
+function openRunAllModal() {
+  const activeSites = S.sites.filter(s => s.wpUrl && s.wpPass);
+  if (!activeSites.length) {
+    toast('No sites have WordPress credentials configured', 'err');
+    return;
+  }
+
+  const siteRows = activeSites.map((s, i) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div class="site-dot" style="background:${siteColor(siteIdx(s.id))}"></div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${esc(s.name)}</div>
+        <div style="font-size:11px;color:var(--text-3)">${esc((s.topics || [])[(s.topic_idx||0) % (s.topics?.length||1)] || '—')}</div>
+      </div>
+      <span class="badge badge-scheduled" id="run-status-${s.id}">queued</span>
+    </div>
+  `).join('');
+
+  openModal(`
+    <div class="modal-title">Run all sites</div>
+    <div style="font-size:12px;color:var(--text-2);margin-bottom:12px">Publishes each site's next topic in sequence. Sites without WordPress credentials are skipped.</div>
+    <div style="margin-bottom:14px">${siteRows}</div>
+    <div class="progress-bar"><div class="progress-fill" id="runall-progress" style="width:0%"></div></div>
+    <div class="log-panel" id="runall-log" style="max-height:160px"><div class="log-line"><span class="log-time">--:--:--</span><span class="log-info">Ready</span></div></div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-ghost" id="runall-close">Close</button>
+      <button class="btn btn-primary" id="runall-start">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Run all
+      </button>
+    </div>
+  `);
+
+  document.getElementById('runall-close').onclick = closeModal;
+
+  document.getElementById('runall-start').onclick = async () => {
+    const btn = document.getElementById('runall-start');
+    btn.disabled = true;
+
+    const log = document.getElementById('runall-log');
+    const progress = document.getElementById('runall-progress');
+
+    const addLog = (msg, type = 'info') => {
+      const t = new Date().toTimeString().slice(0,8);
+      log.innerHTML += `<div class="log-line"><span class="log-time">${t}</span><span class="log-${type}">${esc(msg)}</span></div>`;
+      log.scrollTop = log.scrollHeight;
+    };
+
+    let done = 0;
+    for (const site of activeSites) {
+      const badge = document.getElementById(`run-status-${site.id}`);
+      if (badge) { badge.className = 'badge badge-running'; badge.textContent = 'running'; }
+      addLog(`━━ ${site.name} ━━`, 'info');
+
+      try {
+        await runSite(site, addLog);
+        if (badge) { badge.className = 'badge badge-published'; badge.textContent = 'done'; }
+        addLog(`${site.name} complete`, 'ok');
+      } catch(e) {
+        if (badge) { badge.className = 'badge badge-failed'; badge.textContent = 'failed'; }
+        addLog(`${site.name} failed: ${e.message}`, 'err');
+      }
+
+      done++;
+      if (progress) progress.style.width = Math.round((done / activeSites.length) * 100) + '%';
+
+      // 30-second gap between sites in "run all" to stagger API calls
+      if (done < activeSites.length) {
+        addLog('Waiting 30s before next site…', 'info');
+        await new Promise(r => setTimeout(r, 30000));
+      }
+    }
+
+    btn.textContent = '✓ All done';
+    render();
+    toast('All sites processed', 'ok');
+  };
+}
+
+// ── Add Post Modal ──
+function openAddPostModal() {
+  const now = new Date();
+  const ds = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+  openModal(`
+    <div class="modal-title">Add manual post</div>
+    <div class="field"><label>Site</label>
+      <select id="np-site">${S.sites.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select>
+    </div>
+    <div class="field"><label>Topic / title</label><input id="np-topic" placeholder="Article topic or headline"></div>
+    <div class="field-row">
+      <div class="field"><label>Date</label><input id="np-date" type="date" value="${ds}"></div>
+      <div class="field"><label>Time (UTC)</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input id="np-h" type="number" min="0" max="23" value="7" style="width:60px">
+          <span style="color:var(--text-3)">:</span>
+          <input id="np-m" type="number" min="0" max="59" step="15" value="0" style="width:60px">
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="np-cancel">Cancel</button>
+      <button class="btn btn-primary" id="np-save">Add post</button>
+    </div>
+  `);
+
+  document.getElementById('np-cancel').onclick = closeModal;
+  document.getElementById('np-save').onclick = () => {
+    const ds = document.getElementById('np-date').value;
+    if (!ds) return;
+    const dt = new Date(ds + 'T00:00:00');
+    dt.setHours(parseInt(document.getElementById('np-h').value)||7, parseInt(document.getElementById('np-m').value)||0, 0, 0);
+    S.posts.push({
+      id: 'manual_' + Date.now(),
+      siteId: document.getElementById('np-site').value,
+      topic: document.getElementById('np-topic').value || 'Untitled post',
+      date: dt, status: 'scheduled', manual: true,
+    });
+    saveState(); closeModal(); render();
+    toast('Post added', 'ok');
+  };
+}
+
+// ── Day Modal ──
+function openDayModal(day) {
+  const y = S.year, m = S.month;
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const dp = S.posts
+    .filter(p => p.date.getFullYear()===y && p.date.getMonth()===m && p.date.getDate()===day)
+    .sort((a,b) => a.date - b.date);
+
+  const rows = dp.map(p => {
+    const si = siteIdx(p.siteId);
+    const col = si >= 0 ? siteColor(si) : '#9a9a92';
+    const badgeClass = { scheduled:'badge-scheduled', published:'badge-published', draft:'badge-draft', failed:'badge-failed' }[p.status] || 'badge-draft';
+    return `<div class="day-post-row">
+      <div style="font-size:11px;color:var(--text-3);min-width:44px">${fmt12(p.date.getHours(), p.date.getMinutes())}</div>
+      <div class="site-dot" style="background:${col}"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.topic)}</div>
+        <div style="font-size:11px;color:var(--text-3)">${esc(S.sites[si]?.name || '?')}</div>
+      </div>
+      <span class="badge ${badgeClass}">${p.status}</span>
+      <button class="btn btn-ghost" style="padding:3px 8px" data-del-post="${p.id}">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      </button>
+    </div>`;
+  }).join('');
+
+  openModal(`
+    <div class="modal-title">${MONTHS[m]} ${day}</div>
+    ${dp.length ? rows : '<div style="color:var(--text-3);font-size:13px;padding:12px 0">No posts scheduled.</div>'}
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="day-close">Close</button>
+    </div>
+  `);
+
+  document.getElementById('day-close').onclick = closeModal;
+  document.querySelectorAll('[data-del-post]').forEach(el => {
+    el.onclick = () => {
+      S.posts = S.posts.filter(p => p.id !== el.dataset.delPost);
+      saveState(); closeModal(); render();
+    };
+  });
+}
+
+// ── Export/Import ──
+function exportConfig() {
+  const cfg = S.sites.map(s => ({
+    id: s.id, name: s.name, url: s.url,
+    wp_url: s.wpUrl, wp_username: s.wpUser, wp_app_password: s.wpPass,
+    category: s.category, freq: s.freq,
+    schedule_hour: s.schedHour, schedule_min: s.schedMin,
+    topic_idx: s.topic_idx || 0, topics: s.topics || [],
+    description: s.description || '', audience: s.audience || '',
+    tone: s.tone || '', niche: s.niche || '', usp: s.usp || '',
+    active: true, last_run: s.last_run || null,
+  }));
+  const blob = new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'sites_config.json';
+  a.click();
+  toast('Config exported', 'ok');
+}
+
+function importConfig() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        let updated = 0;
+        data.forEach(sc => {
+          const existing = S.sites.find(s => s.id === sc.id || s.name === sc.name);
+          if (existing) {
+            existing.topic_idx = sc.topic_idx || 0;
+            existing.last_run = sc.last_run || null;
+            if (sc.wp_url) existing.wpUrl = sc.wp_url;
+            if (sc.wp_username) existing.wpUser = sc.wp_username;
+            if (sc.wp_app_password) existing.wpPass = sc.wp_app_password;
+            updated++;
+          }
+        });
+        buildSchedule(); saveState(); render();
+        toast(`Imported — ${updated} site(s) synced`, 'ok');
+      } catch(e) {
+        toast('Invalid JSON file', 'err');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  EVENT HANDLERS
+// ═══════════════════════════════════════════════════════════════════
+function attachHandlers() {
+  const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
+
+  on('btn-prev', 'click', () => { if (--S.month < 0) { S.month = 11; S.year--; } render(); });
+  on('btn-next', 'click', () => { if (++S.month > 11) { S.month = 0; S.year++; } render(); });
+  on('btn-vcal', 'click', () => { S.view = 'calendar'; render(); });
+  on('btn-vlist', 'click', () => { S.view = 'list'; render(); });
+  on('btn-add-site', 'click', () => openSiteModal());
+  on('btn-add-post', 'click', () => openAddPostModal());
+  on('btn-api-key', 'click', () => openApiKeyModal());
+  on('btn-export-config', 'click', exportConfig);
+  on('btn-import-config', 'click', importConfig);
+  on('btn-run-all', 'click', openRunAllModal);
+
+  document.querySelectorAll('.site-row').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.siteid;
+      S.activeSite = S.activeSite === id ? null : id;
+      render();
+    });
+    el.addEventListener('dblclick', () => openSiteModal(el.dataset.siteid));
+  });
+
+  document.querySelectorAll('.cal-cell[data-day]').forEach(el => {
+    el.addEventListener('click', () => openDayModal(parseInt(el.dataset.day)));
+  });
+
+  document.querySelectorAll('[data-del]').forEach(el => {
+    el.addEventListener('click', () => {
+      S.posts = S.posts.filter(p => p.id !== el.dataset.del);
+      saveState(); render();
+    });
+  });
+
+  document.querySelectorAll('[data-retry]').forEach(el => {
+    el.addEventListener('click', () => {
+      const p = S.posts.find(q => q.id === el.dataset.retry);
+      if (p) p.status = 'scheduled';
+      saveState(); render();
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════
+render();
+</script>
+</body>
+</html>
