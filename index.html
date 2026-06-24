@@ -335,30 +335,61 @@ async function claude(prompt,maxTok=2800){
   return(await r.json()).content[0].text.trim();
 }
 
-async function writeArticle(topic,site){
+// ─── SITEMAP FETCHER ──────────────────────────────────────────────────
+// Fetches the sitemap XML and parses out all <loc> URLs.
+// Returns an array of URL strings. Caps at 150 to keep prompt size sane.
+async function fetchSitemapUrls(sitemapUrl,logFn){
+  if(!sitemapUrl)return[];
+  try{
+    // Use a CORS proxy approach — fetch via no-cors won't give us body,
+    // so we attempt direct first (works when the site has CORS open),
+    // then fall back silently so publishing still succeeds.
+    const r=await fetch(sitemapUrl,{method:'GET',headers:{Accept:'application/xml,text/xml,*/*'}});
+    if(!r.ok)throw new Error(`Sitemap returned ${r.status}`);
+    const xml=await r.text();
+    // Parse all <loc> tags
+    const matches=[...xml.matchAll(/<loc>([\s\S]*?)<\/loc>/gi)];
+    const urls=matches.map(m=>m[1].trim()).filter(u=>u.startsWith('http')).slice(0,150);
+    if(logFn)logFn(`Sitemap: ${urls.length} URLs loaded`,'lok');
+    return urls;
+  }catch(e){
+    // Non-fatal — if sitemap can't be fetched (CORS etc) we continue without it
+    if(logFn)logFn(`Sitemap fetch skipped: ${e.message} — pillar pages still apply`,'lw');
+    return[];
+  }
+}
+
+async function writeArticle(topic,site,logFn,sitemapUrls=[]){
   const today=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
 
   // Parse topic — supports "Label | hint about angles and subtopics"
   const {label:topicLabel,hint:topicHint}=parseTopic(topic);
 
-  // Build internal linking instructions
+  // Build internal linking block using REAL urls only
   const pillarPages=site.pillarPages||[];
-  const sitemapUrl=site.sitemapUrl||'';
 
   let linkingBlock='';
-  if(sitemapUrl||pillarPages.length){
-    linkingBlock+='\nINTERNAL LINKING RULES:\n';
+  if(pillarPages.length||sitemapUrls.length){
+    linkingBlock+='\nINTERNAL LINKING RULES — CRITICAL:\n';
+    linkingBlock+='You may ONLY link to URLs from the two lists below. Do NOT invent, guess, or construct any URLs. If no URL from these lists fits naturally, do not add a link.\n\n';
+
     if(pillarPages.length){
-      linkingBlock+='Pillar pages — you MUST link to these using the exact anchor text shown whenever it fits naturally in the article (aim to use 1-3 of these per article):\n';
+      linkingBlock+='PILLAR PAGES (highest priority — link to these first when relevant, using the exact anchor text specified):\n';
       pillarPages.forEach(p=>{
-        linkingBlock+=`  - Anchor text: "${p.keyphrase}" → URL: ${p.url}\n`;
+        linkingBlock+=`  Anchor: "${p.keyphrase}" → ${p.url}\n`;
       });
-      linkingBlock+='Use the exact anchor text as the <a> link text. Only link when it reads naturally — never force it.\n';
+      linkingBlock+='\n';
     }
-    if(sitemapUrl){
-      linkingBlock+=`Sitemap: ${sitemapUrl}\n`;
-      linkingBlock+='You may also reference other relevant pages from this site\'s sitemap as supporting internal links where genuinely useful. Use descriptive anchor text that matches the linked page\'s topic.\n';
+
+    if(sitemapUrls.length){
+      linkingBlock+=`SITEMAP PAGES (use any of these as supporting links where genuinely relevant — pick the URL that best matches the context):\n`;
+      // Group by path depth to keep the list readable
+      sitemapUrls.forEach(u=>{ linkingBlock+=`  ${u}\n`; });
+      linkingBlock+='\n';
     }
+
+    linkingBlock+='LINK FORMAT: <a href="EXACT_URL_FROM_LISTS_ABOVE">descriptive anchor text</a>\n';
+    linkingBlock+='Aim for 2-4 internal links per article. Only link when it genuinely helps the reader.\n';
   }
 
   // Word count target
@@ -366,13 +397,13 @@ async function writeArticle(topic,site){
   const wcLow=Math.round(wc*0.9);
   const wcHigh=Math.round(wc*1.1);
 
-  // Allowed tags — pass names so Claude can pick from them
+  // Allowed tags — exactly ONE, the closest match to the topic
   const allowedTagIds=site.allowedTagIds||[];
   const wpTagPool=site.wpTagPool||[];
   const allowedTagNames=wpTagPool.filter(t=>allowedTagIds.includes(t.id)).map(t=>t.name);
   const tagInstruction=allowedTagNames.length
-    ? `TAGS: Choose 2-5 of the most relevant tags from this list ONLY — do not invent new ones:\n${allowedTagNames.join(', ')}`
-    : 'TAGS: Suggest 3-5 relevant short tags.';
+    ? `TAG: Choose exactly ONE tag from this list that most closely matches the topic — do not invent tags, do not choose more than one:\n${allowedTagNames.join(', ')}`
+    : 'TAG: Suggest exactly one short, relevant tag.';
 
   const text=await claude(`You are a content writer for ${site.name}, a ${site.niche||'general'} website.
 
@@ -394,16 +425,24 @@ ARTICLE REQUIREMENTS:
 - 2-3 subheadings using <h2> tags
 - Actionable insights drawn from the content focus angles
 - HTML only: <p>, <strong>, <h2>, <a href="..."> — no markdown
-- For all internal links use exact <a href="URL">anchor text</a> format
+- Internal links MUST use only URLs from the lists provided above — no exceptions
 - No disclaimers or "this is not advice" language
 - End with a clear call to action
 
 ${tagInstruction}
 
 Respond ONLY with valid JSON (no markdown fences):
-{"title":"<compelling headline>","content":"<full article HTML>","excerpt":"<meta description under 160 chars>","tags":["tag1","tag2"],"search_term":"<3-5 word Unsplash photo search>"}`,Math.max(2000,Math.round(wc*2.2)));
+{"title":"<compelling headline>","content":"<full article HTML>","excerpt":"<standard WP excerpt, 1-2 sentences>","yoast_keyphrase":"<2-5 word focus keyphrase — the primary SEO term this article targets>","yoast_meta":"<meta description 120-158 chars — must include the focus keyphrase, be written to earn a click, no truncation>","tags":["single_tag"],"search_term":"<3-5 word Unsplash photo search>"}`,Math.max(2000,Math.round(wc*2.2)));
   const m=text.match(/\{[\s\S]*\}/);if(!m)throw new Error('Could not parse article JSON from Claude');
-  return JSON.parse(m[0]);
+  const parsed=JSON.parse(m[0]);
+  // Enforce single tag
+  if(Array.isArray(parsed.tags))parsed.tags=parsed.tags.slice(0,1);
+  // Enforce meta description character range — trim if over, warn if under
+  if(parsed.yoast_meta){
+    if(parsed.yoast_meta.length>158)parsed.yoast_meta=parsed.yoast_meta.slice(0,155)+'...';
+    if(parsed.yoast_meta.length<120)parsed.yoast_meta=parsed.yoast_meta.trim(); // keep as-is, just tidy
+  }
+  return parsed;
 }
 
 // ─── UNSPLASH ─────────────────────────────────────────────────────────
@@ -474,26 +513,44 @@ async function publishPost(site,article,mediaId,logFn){
   const catId=await getOrCreateCat(site,site.category||'Blog');
   logFn(`Category: ${site.category} (ID ${catId})`,'ok');
 
-  // Resolve Claude's tag choices against the allowed pool
+  // Resolve Claude's single tag choice against the allowed pool
   const allowedTagIds=site.allowedTagIds||[];
   const wpTagPool=site.wpTagPool||[];
   let finalTagIds=[];
 
   if(allowedTagIds.length&&wpTagPool.length){
-    // Match Claude's tag names against allowed pool (case-insensitive)
-    const chosenNames=(article.tags||[]).map(t=>t.toLowerCase().trim());
-    finalTagIds=wpTagPool
-      .filter(t=>allowedTagIds.includes(t.id)&&chosenNames.some(n=>t.name.toLowerCase().trim()===n))
-      .map(t=>t.id);
-    logFn(`Tags: ${finalTagIds.length} matched from allowed pool (${(article.tags||[]).join(', ')})`,'ok');
+    // Match Claude's top tag name against allowed pool (case-insensitive), take first match only
+    const chosenName=((article.tags||[])[0]||'').toLowerCase().trim();
+    const match=wpTagPool.find(t=>allowedTagIds.includes(t.id)&&t.name.toLowerCase().trim()===chosenName);
+    if(match){
+      finalTagIds=[match.id];
+      logFn(`Tag: "${match.name}" (ID ${match.id})`,'ok');
+    } else {
+      logFn(`Tag: no match for "${article.tags?.[0]||''}" in allowed pool — publishing without tag`,'lw');
+    }
   } else if(article.tags?.length){
-    // No pool configured — get-or-create Claude's suggestions
-    finalTagIds=await getOrCreateTags(site,article.tags);
-    logFn(`Tags: ${finalTagIds.length} created/matched`,'ok');
+    // No pool configured — get-or-create the single suggested tag
+    const single=article.tags[0];
+    const ids=await getOrCreateTags(site,[single]);
+    finalTagIds=ids.slice(0,1);
+    if(finalTagIds.length)logFn(`Tag: "${single}" created/matched`,'ok');
   }
 
   const credit=article._photo?`<p style="font-size:11px;color:#9a9a9a;margin-top:24px">Photo: <a href="${article._photo.photographerUrl}">${article._photo.photographer}</a> / Unsplash</p>`:'';
-  const postData={title:article.title,content:article.content+credit,excerpt:article.excerpt||'',status:'publish',categories:catId?[catId]:[],tags:finalTagIds,comment_status:'open'};
+  const postData={
+    title:article.title,
+    content:article.content+credit,
+    excerpt:article.excerpt||'',
+    status:'publish',
+    categories:catId?[catId]:[],
+    tags:finalTagIds,
+    comment_status:'open',
+    // Yoast SEO fields — written via meta on initial post creation
+    meta:{
+      _yoast_wpseo_focuskw: article.yoast_keyphrase||'',
+      _yoast_wpseo_metadesc: article.yoast_meta||article.excerpt||'',
+    },
+  };
   if(mediaId)postData.featured_media=mediaId;
 
   const r=await wpReq(site,'/posts',{method:'POST',body:JSON.stringify(postData)});
@@ -503,6 +560,25 @@ async function publishPost(site,article,mediaId,logFn){
     throw new Error(`Publish failed (${r.status}): ${e?.message||hint}`);
   }
   const post=await r.json();
+
+  // Yoast meta fields — also attempt a direct update on the created post
+  // (belt-and-suspenders: some Yoast versions need a separate PATCH)
+  if(article.yoast_keyphrase||article.yoast_meta){
+    try{
+      await wpReq(site,`/posts/${post.id}`,{
+        method:'POST',
+        body:JSON.stringify({
+          meta:{
+            _yoast_wpseo_focuskw: article.yoast_keyphrase||'',
+            _yoast_wpseo_metadesc: article.yoast_meta||article.excerpt||'',
+          }
+        })
+      });
+      logFn(`Yoast: keyphrase "${article.yoast_keyphrase}" · meta ${(article.yoast_meta||'').length} chars`,'ok');
+    }catch(e){
+      logFn('Yoast meta write failed — post published but Yoast fields may need manual entry','lw');
+    }
+  }
   logFn('Verifying post is live…','li');
   await new Promise(res=>setTimeout(res,2000));
   try{await fetch(post.link,{method:'HEAD',mode:'no-cors'});logFn(`Post live: ${post.link}`,'ok');}
@@ -530,10 +606,17 @@ async function runSite(site,logFn,overrideTopic=null){
   const topics=site.topics||[];if(!topics.length)throw new Error('No topics configured.');
   const idx=site.topic_idx||0;
   const topic=overrideTopic||topics[idx%topics.length];
-  logFn(`Topic area: ${topic}`,'li');
+  logFn(`Topic area: ${parseTopic(topic).label}`,'li');
+
+  // Fetch sitemap URLs so Claude only links to real pages
+  let sitemapUrls=[];
+  if(site.sitemapUrl){
+    logFn('Fetching sitemap…','li');
+    sitemapUrls=await fetchSitemapUrls(site.sitemapUrl,logFn);
+  }
 
   logFn('Writing article via Claude…','li');
-  const article=await writeArticle(topic,site);
+  const article=await writeArticle(topic,site,logFn,sitemapUrls);
   logFn(`Title: "${article.title}"`,'lok');
 
   logFn(`Fetching photo for: ${article.search_term}`,'li');
