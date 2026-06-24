@@ -895,120 +895,18 @@ async function fetchWPTags(site){
 }
 
 // ─── PILLAR PAGE HELPERS ──────────────────────────────────────────────
+// Simple render — no nested modals, no shared closures needed.
+// The live `pages` array lives entirely inside openSiteModal.
 function renderPillarRows(pages){
   if(!pages||!pages.length)return'';
   return pages.map((p,i)=>`
-    <div class="pillar-row" data-pi="${i}">
+    <div class="pillar-row">
       <div style="flex:1;min-width:0">
         <div style="font-size:11px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.keyphrase||'(no keyphrase)')}</div>
         <div style="font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px">${esc(p.url||'(no url)')}</div>
       </div>
       <button class="btn btn-g" style="padding:2px 8px;font-size:10px;flex-shrink:0" data-del-pillar="${i}">✕</button>
     </div>`).join('');
-}
-
-function hookPillarTab(currentPages){
-  // keep a live copy we mutate
-  let pages=[...currentPages];
-
-  const refresh=()=>{
-    const container=document.getElementById('s-pillars');
-    const empty=document.getElementById('s-pillar-empty');
-    if(container)container.innerHTML=renderPillarRows(pages);
-    if(empty)empty.style.display=pages.length?'none':'block';
-    // re-attach delete handlers
-    document.querySelectorAll('[data-del-pillar]').forEach(btn=>{
-      btn.onclick=()=>{pages.splice(parseInt(btn.dataset.delPillar),1);refresh();};
-    });
-    // expose to save handler via a closure on the element
-    const phantom=document.getElementById('s-pillar-store');
-    if(phantom)phantom.value=JSON.stringify(pages);
-  };
-
-  document.getElementById('s-add-pillar').onclick=()=>{
-    openPillarEntryModal(newPage=>{
-      pages.push(newPage);refresh();
-    });
-  };
-
-  refresh();
-  return()=>pages; // getter so save handler can call it
-}
-
-function openPillarEntryModal(onSave){
-  // Temporarily swap to a nested modal — keep backdrop, swap modal content
-  const existing=document.querySelector('.mbd .modal');
-  if(!existing)return;
-  const prev=existing.innerHTML;
-  existing.innerHTML=`
-    <div class="mtitle" style="font-size:14px">Add pillar page</div>
-    <div class="field">
-      <label>Target URL</label>
-      <input id="pp-url" placeholder="https://myblog.com/how-it-works">
-    </div>
-    <div class="field">
-      <label>Target keyphrase</label>
-      <input id="pp-kp" placeholder="local business lead finder">
-      <div class="fhint">Exact anchor text Claude uses when linking to this page. Keep it natural — 2-5 words works best.</div>
-    </div>
-    <div class="mact">
-      <button class="btn btn-g" id="pp-back">Back</button>
-      <button class="btn btn-p" id="pp-add">Add pillar page</button>
-    </div>
-  `;
-  document.getElementById('pp-back').onclick=()=>{existing.innerHTML=prev;rehookSiteModal();};
-  document.getElementById('pp-add').onclick=()=>{
-    const url=document.getElementById('pp-url').value.trim();
-    const keyphrase=document.getElementById('pp-kp').value.trim();
-    if(!url||!keyphrase){toast('URL and keyphrase are both required','err');return;}
-    existing.innerHTML=prev;
-    rehookSiteModal();
-    onSave({url,keyphrase});
-  };
-}
-
-// Re-attach the live handlers after returning from nested modal
-function rehookSiteModal(){
-  // re-hook connection test
-  const testBtn=document.getElementById('s-test');
-  if(testBtn){
-    testBtn.onclick=async()=>{
-      const btn=document.getElementById('s-test');const res=document.getElementById('s-conn-result');
-      const ts={wpUrl:document.getElementById('s-wp')?.value.trim()||'',wpUser:document.getElementById('s-wpu')?.value.trim()||'admin',wpPass:document.getElementById('s-wpp')?.value||''};
-      if(!ts.wpUrl||!ts.wpPass){res.innerHTML=`<div class="conn-row" style="margin-bottom:8px">⚠ Enter WP URL and app password first</div>`;return;}
-      btn.disabled=true;btn.textContent='Testing…';res.innerHTML='';
-      try{const name=await testWP(ts);res.innerHTML=`<div class="conn-row" style="border-color:#86efac;background:var(--gbg);color:var(--gtx);margin-bottom:8px">✅ Connected as <strong>${esc(name)}</strong></div>`;}
-      catch(e){res.innerHTML=`<div class="conn-row" style="border-color:#fca5a5;background:var(--rbg);color:var(--rtx);margin-bottom:8px">❌ ${esc(e.message)}</div>`;}
-      btn.disabled=false;btn.textContent='✓ Test WordPress connection';
-    };
-  }
-  // re-hook add pillar
-  const addPillarBtn=document.getElementById('s-add-pillar');
-  if(addPillarBtn){
-    // read current pages from the store input
-    const store=document.getElementById('s-pillar-store');
-    let pages=[];try{pages=JSON.parse(store?.value||'[]');}catch(e){}
-    addPillarBtn.onclick=()=>{
-      openPillarEntryModal(newPage=>{
-        pages.push(newPage);
-        const container=document.getElementById('s-pillars');
-        const empty=document.getElementById('s-pillar-empty');
-        if(container)container.innerHTML=renderPillarRows(pages);
-        if(empty)empty.style.display=pages.length?'none':'block';
-        document.querySelectorAll('[data-del-pillar]').forEach(btn=>{
-          btn.onclick=()=>{pages.splice(parseInt(btn.dataset.delPillar),1);
-            const c2=document.getElementById('s-pillars');const e2=document.getElementById('s-pillar-empty');
-            if(c2)c2.innerHTML=renderPillarRows(pages);if(e2)e2.style.display=pages.length?'none':'block';
-            document.querySelectorAll('[data-del-pillar]').forEach(b2=>b2.onclick=b2.onclick);
-            if(store)store.value=JSON.stringify(pages);
-          };
-        });
-        if(store)store.value=JSON.stringify(pages);
-      });
-    };
-  }
-  // re-hook tab switching
-  hookTabs();
 }
 
 // ─── SITE MODAL ───────────────────────────────────────────────────────
@@ -1106,19 +1004,26 @@ function openSiteModal(siteId=null){
       <div class="field">
         <label>Sitemap URL</label>
         <input id="s-sitemap" value="${esc(site?.sitemapUrl||'')}" placeholder="https://myblog.com/sitemap.xml">
-        <div class="fhint">Claude will be told this sitemap exists and can reference pages from it for relevant internal links within articles.</div>
+        <div class="fhint">Claude fetches this at publish time and only links to URLs actually found in it.</div>
       </div>
       <div style="margin-top:16px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div>
-            <div style="font-size:11px;font-weight:600;color:var(--t2)">Pillar pages</div>
-            <div class="fhint" style="margin-top:1px">These are your most important pages. Claude will link back to them using your exact target keyphrase whenever naturally relevant.</div>
+        <div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:4px">Pillar pages</div>
+        <div class="fhint" style="margin-bottom:10px">Claude links to these using your exact keyphrase. Only links when it fits naturally.</div>
+        <div id="s-pillars"></div>
+        <div id="s-pillar-empty" style="font-size:12px;color:var(--t3);padding:10px 0;text-align:center;border:1px dashed var(--border);border-radius:var(--r);margin-bottom:10px">No pillar pages yet</div>
+        <div style="border:1px solid var(--border);border-radius:var(--r);padding:12px;background:var(--gray)">
+          <div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:8px">Add pillar page</div>
+          <div class="field" style="margin-bottom:8px">
+            <label>Target URL</label>
+            <input id="pp-url" placeholder="https://myblog.com/how-it-works">
           </div>
-          <button class="btn btn-g" id="s-add-pillar" style="padding:4px 10px;font-size:11px;flex-shrink:0">+ Add page</button>
+          <div class="field" style="margin-bottom:8px">
+            <label>Keyphrase (exact anchor text)</label>
+            <input id="pp-kp" placeholder="local business lead finder">
+            <div class="fhint">2-5 words. This is the exact text Claude uses as the link.</div>
+          </div>
+          <button class="btn btn-p" id="s-add-pillar" style="width:100%;justify-content:center">+ Add pillar page</button>
         </div>
-        <div id="s-pillars">${renderPillarRows(site?.pillarPages||[])}</div>
-        <div id="s-pillar-empty" style="display:${(site?.pillarPages||[]).length?'none':'block'};font-size:12px;color:var(--t3);padding:12px 0;text-align:center;border:1px dashed var(--border);border-radius:var(--r)">No pillar pages yet — add your most important pages above</div>
-        <input type="hidden" id="s-pillar-store" value="${esc(JSON.stringify(site?.pillarPages||[]))}">
       </div>
     </div>
     <div class="mact">
@@ -1129,23 +1034,46 @@ function openSiteModal(siteId=null){
   `);
   hookTabs();
 
-  // ── Pillar tab setup ──
+  // ── Pillar pages — self-contained, no nested modals ──
   const initPillars=()=>{
-    const store=document.getElementById('s-pillar-store');
-    let pages=[];try{pages=JSON.parse(store?.value||'[]');}catch(e){}
+    // Single live array — source of truth for the whole tab
+    let pages=(site?.pillarPages||[]).map(p=>({...p}));
+
     const refresh=()=>{
       const container=document.getElementById('s-pillars');
       const empty=document.getElementById('s-pillar-empty');
       if(container)container.innerHTML=renderPillarRows(pages);
       if(empty)empty.style.display=pages.length?'none':'block';
-      if(store)store.value=JSON.stringify(pages);
+      // Re-attach delete buttons after each render
       document.querySelectorAll('[data-del-pillar]').forEach(btn=>{
-        btn.onclick=()=>{pages.splice(parseInt(btn.dataset.delPillar),1);refresh();};
+        btn.onclick=(e)=>{
+          e.preventDefault();
+          pages.splice(parseInt(btn.dataset.delPillar),1);
+          refresh();
+        };
       });
     };
     refresh();
-    const addBtn=document.getElementById('s-add-pillar');
-    if(addBtn)addBtn.onclick=()=>{openPillarEntryModal(newPage=>{pages.push(newPage);refresh();});};
+
+    // Add button — reads the inline form fields, pushes to array, clears fields
+    document.getElementById('s-add-pillar').onclick=(e)=>{
+      e.preventDefault();
+      const urlEl=document.getElementById('pp-url');
+      const kpEl=document.getElementById('pp-kp');
+      const url=(urlEl?.value||'').trim();
+      const keyphrase=(kpEl?.value||'').trim();
+      if(!url){toast('URL is required','err');urlEl?.focus();return;}
+      if(!keyphrase){toast('Keyphrase is required','err');kpEl?.focus();return;}
+      pages.push({url,keyphrase});
+      if(urlEl)urlEl.value='';
+      if(kpEl)kpEl.value='';
+      refresh();
+      toast('Pillar page added','ok');
+    };
+
+    // Expose pages to save handler via a getter on the container element
+    // Save handler calls getPillarPages() defined below
+    window._pillarPages=pages;
   };
   initPillars();
 
@@ -1230,7 +1158,7 @@ function openSiteModal(siteId=null){
   document.getElementById('s-save').onclick=()=>{
     const name=document.getElementById('s-name').value.trim();if(!name){toast('Name required','err');return;}
     const topics=(document.getElementById('s-topics')?.value||'').trim().split('\n').filter(Boolean);
-    let pillarPages=[];try{pillarPages=JSON.parse(document.getElementById('s-pillar-store')?.value||'[]');}catch(e){}
+    const pillarPages=window._pillarPages||[];
     let wpTagPool=[];try{wpTagPool=JSON.parse(document.getElementById('s-tag-pool')?.value||'[]');}catch(e){}
     let allowedTagIds=[];try{allowedTagIds=JSON.parse(document.getElementById('s-tag-allowed')?.value||'[]');}catch(e){}
     const d={name,url:document.getElementById('s-url').value.trim(),
