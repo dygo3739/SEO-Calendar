@@ -264,7 +264,8 @@ function buildSchedule(){
       if(!show)continue;
       const dt=new Date(now);dt.setDate(dt.getDate()+d);dt.setHours(site.schedHour,site.schedMin,0,0);
       if(dt<=now)continue;
-      gen.push({id:`g_${site.id}_${d}`,siteId:site.id,topic:topics[cursor%topics.length],title:null,date:new Date(dt),status:'scheduled',manual:false});
+      const parsed=parseTopic(topics[cursor%topics.length]);
+      gen.push({id:`g_${site.id}_${d}`,siteId:site.id,topic:parsed.raw,displayTopic:parsed.label,title:null,date:new Date(dt),status:'scheduled',manual:false});
       cursor++;shown++;
     }
   });
@@ -299,9 +300,21 @@ function qPrev(topics,freq,h,m,start=0,n=6){
   while(shown<n&&d<90){
     const show=freq==='daily'||(freq==='weekly'&&d%7===0)||(freq==='biweekly'&&d%14===0);
     if(show){const dt=new Date(now);dt.setDate(dt.getDate()+d);
-      html+=`<div class="qrow"><span class="qdate">${fS(dt)}</span><span style="color:var(--text)">${esc(topics[cursor%topics.length])}</span></div>`;
+      html+=`<div class="qrow"><span class="qdate">${fS(dt)}</span><span style="color:var(--text)">${esc(parseTopic(topics[cursor%topics.length]).label)}</span></div>`;
       cursor++;shown++;}d++;
   }return html;
+}
+
+// ─── TOPIC PARSING ────────────────────────────────────────────────────
+// Topics can be plain ("Tax Planning") or pipe-separated ("Tax Planning | deductions, entity selection, year-end strategies")
+// The label (before |) is shown in the calendar; the hint (after |) is injected into the article prompt.
+function parseTopic(raw){
+  const parts=(raw||'').split('|');
+  return{
+    label:parts[0].trim(),
+    hint:parts[1]?parts[1].trim():'',
+    raw:raw||'',
+  };
 }
 
 // ─── TOAST ────────────────────────────────────────────────────────────
@@ -324,6 +337,9 @@ async function claude(prompt,maxTok=2800){
 
 async function writeArticle(topic,site){
   const today=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+
+  // Parse topic — supports "Label | hint about angles and subtopics"
+  const {label:topicLabel,hint:topicHint}=parseTopic(topic);
 
   // Build internal linking instructions
   const pillarPages=site.pillarPages||[];
@@ -361,7 +377,7 @@ async function writeArticle(topic,site){
   const text=await claude(`You are a content writer for ${site.name}, a ${site.niche||'general'} website.
 
 TODAY: ${today}
-TOPIC AREA: ${topic}
+TOPIC AREA: ${topicLabel}${topicHint?`\nCONTENT FOCUS: ${topicHint}`:''}
 
 SITE INFO:
 ${site.description||`${site.name} serves ${site.audience||'general readers'}.`}
@@ -369,14 +385,14 @@ AUDIENCE: ${site.audience||'general readers'}
 TONE: ${site.tone||'helpful and informative'}
 ${site.usp?`USP (reference naturally): ${site.usp}`:''}
 ${linkingBlock}
-TITLE RULE: Create an original, compelling SEO headline. Do NOT simply restate the topic word-for-word. Make it specific and search-friendly. Example — if topic is "how insurance agents find new clients", a strong title is "7 Proven Ways Insurance Agents Land New Clients in 2025 (Without Cold Calling)".
+TITLE RULE: Create an original, compelling SEO headline based on the topic area and content focus. Do NOT simply restate the topic word-for-word. Make it specific and search-friendly. Example — if topic is "Tax Planning" with focus "deductions, entity selection", a strong title is "7 Tax Planning Moves Every Small Business Owner Should Make Before Year-End".
 
 ARTICLE REQUIREMENTS:
 - Target length: ${wcLow}–${wcHigh} words (target: ${wc} words)
-- SEO-optimised, keyword used naturally throughout
+- SEO-optimised, primary keyword used naturally throughout
 - Strong hook opening paragraph
 - 2-3 subheadings using <h2> tags
-- Actionable insights throughout
+- Actionable insights drawn from the content focus angles
 - HTML only: <p>, <strong>, <h2>, <a href="..."> — no markdown
 - For all internal links use exact <a href="URL">anchor text</a> format
 - No disclaimers or "this is not advice" language
@@ -385,7 +401,7 @@ ARTICLE REQUIREMENTS:
 ${tagInstruction}
 
 Respond ONLY with valid JSON (no markdown fences):
-{"title":"<compelling headline, NOT a copy of topic>","content":"<full article HTML with internal links embedded>","excerpt":"<meta description under 160 chars>","tags":["tag1","tag2"],"search_term":"<3-5 word Unsplash photo search>"}`,Math.max(2000,Math.round(wc*2.2)));
+{"title":"<compelling headline>","content":"<full article HTML>","excerpt":"<meta description under 160 chars>","tags":["tag1","tag2"],"search_term":"<3-5 word Unsplash photo search>"}`,Math.max(2000,Math.round(wc*2.2)));
   const m=text.match(/\{[\s\S]*\}/);if(!m)throw new Error('Could not parse article JSON from Claude');
   return JSON.parse(m[0]);
 }
@@ -576,7 +592,7 @@ function renderSB(){
 
   const siteRows=S.sites.map((s,i)=>{
     const cnt=S.posts.filter(p=>p.siteId===s.id&&p.status==='scheduled').length;
-    const next=s.topics?.[(s.topic_idx||0)%(s.topics.length||1)]||'—';
+    const next=parseTopic(s.topics?.[(s.topic_idx||0)%(s.topics.length||1)]||'').label||'—';
     const hasWP=!!(s.wpUrl&&s.wpPass);
     return`<div class="site-row ${S.activeSite===s.id?'active':''}" data-sid="${s.id}" title="Click to filter · Double-click to edit">
       <div class="sdot" style="background:${C(i)}"></div>
@@ -654,10 +670,10 @@ function renderCal(){
     const pills=dp.slice(0,3).map(p=>{
       const idx=sI(p.siteId);const bg=idx>=0?PB(idx):'#f4f4f2',tx=idx>=0?PT(idx):'#9a9a92';
       const published=p.status==='published';
-      // published → show generated title (dimmed); upcoming → show topic area
-      const label=published&&p.title ? p.title : p.topic;
+      // published → show generated title (dimmed); upcoming → show topic label
+      const label=published&&p.title ? p.title : (p.displayTopic||parseTopic(p.topic).label);
       const op=published?.55:1;
-      return`<div class="cpill" style="background:${bg};color:${tx};opacity:${op}" title="${esc(published&&p.title?`Title: ${p.title}\nTopic: ${p.topic}`:`Topic: ${p.topic}`)}">${esc(label)}</div>`;
+      return`<div class="cpill" style="background:${bg};color:${tx};opacity:${op}" title="${esc(published&&p.title?`Title: ${p.title}\nTopic: ${p.displayTopic||parseTopic(p.topic).label}`:`Topic: ${p.displayTopic||parseTopic(p.topic).label}`)}">${esc(label)}</div>`;
     }).join('');
     const more=dp.length>3?`<div class="cmore">+${dp.length-3}</div>`:'';
     c+=`<div class="ccell${isT?' today':''}" data-day="${d}"><div class="cdn"><span>${d}</span></div>${pills}${more}</div>`;
@@ -674,10 +690,11 @@ function renderList(){
     const titleCell=p.title
       ? `<div class="l-title" title="${esc(p.title)}">${esc(p.title)}</div>`
       : `<div class="l-title-pending">Generated at publish</div>`;
+    const topicLabel=p.displayTopic||parseTopic(p.topic).label;
     return`<div class="lrow">
       <div><div class="ld">${fS(p.date)}</div><div class="lt2">${f12(p.date.getHours(),p.date.getMinutes())}</div></div>
       ${titleCell}
-      <div class="l-topic" title="${esc(p.topic)}">${esc(p.topic)}</div>
+      <div class="l-topic" title="${esc(topicLabel)}">${esc(topicLabel)}</div>
       <div class="lsite"><div class="sdot" style="background:${col};width:7px;height:7px;flex-shrink:0"></div><span class="lsn">${esc(site?.name||'?')}</span></div>
       <div><span class="badge ${bc}">${p.status}</span></div>
       <div class="lact">
@@ -1160,13 +1177,17 @@ function openSiteModal(siteId=null){
 function openRunModal(siteId){
   const site=S.sites.find(s=>s.id===siteId);if(!site)return;
   const idx=site.topic_idx||0;
-  const topic=(site.topics||[])[idx%(site.topics?.length||1)]||'(no topic)';
+  const rawTopic=(site.topics||[])[idx%(site.topics?.length||1)]||'(no topic)';
+  const {label:topicLabel,hint:topicHint}=parseTopic(rawTopic);
   openModal(`
     <div class="mtitle">Publish — ${esc(site.name)}</div>
-    <div style="display:grid;grid-template-columns:52px 1fr;gap:6px 12px;margin-bottom:14px;align-items:center">
-      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3)">Topic</div>
-      <div style="font-size:13px;font-weight:500;padding:8px 11px;background:var(--gray);border-radius:var(--r)">${esc(topic)}</div>
-      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3)">Title</div>
+    <div style="display:grid;grid-template-columns:52px 1fr;gap:6px 12px;margin-bottom:14px;align-items:start">
+      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);padding-top:10px">Topic</div>
+      <div style="padding:8px 11px;background:var(--gray);border-radius:var(--r)">
+        <div style="font-size:13px;font-weight:500">${esc(topicLabel)}</div>
+        ${topicHint?`<div style="font-size:11px;color:var(--t3);margin-top:3px">${esc(topicHint)}</div>`:''}
+      </div>
+      <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);padding-top:10px">Title</div>
       <div style="font-size:12px;font-style:italic;color:var(--t3);padding:8px 11px;background:var(--gray);border-radius:var(--r)">Generated by Claude at publish time</div>
     </div>
     <div style="font-size:11px;color:var(--t3);margin-bottom:10px">Topic <strong>#${idx+1}</strong> of ${site.topics?.length||0}</div>
@@ -1196,7 +1217,7 @@ function openRunAllModal(){
     <div class="sdot" style="background:${C(sI(s.id))}"></div>
     <div style="flex:1;min-width:0">
       <div style="font-size:12px;font-weight:500">${esc(s.name)}</div>
-      <div style="font-size:10px;color:var(--t3)">Topic: ${esc((s.topics||[])[(s.topic_idx||0)%(s.topics?.length||1)]||'—')}</div>
+      <div style="font-size:10px;color:var(--t3)">Topic: ${esc(parseTopic((s.topics||[])[(s.topic_idx||0)%(s.topics?.length||1)]||'').label||'—')}</div>
       <div style="font-size:10px;font-style:italic;color:var(--t3)">Title: generated by Claude</div>
     </div>
     <span class="badge b-sch" id="ras-${s.id}">queued</span>
@@ -1262,11 +1283,21 @@ function openPushModal(){
     if(!site?.topics?.length){qEl.innerHTML='<div style="font-size:11px;color:var(--t3);margin-bottom:8px">No topics configured.</div>';return;}
     const start=site.topic_idx||0;
     const slice=site.topics.slice(start,start+5);
-    qEl.innerHTML=slice.map(t=>`<div class="ptopic-row" data-t="${esc(t)}"><div class="pradio"></div><div style="font-size:12px;flex:1">${esc(t)}</div></div>`).join('');
+    qEl.innerHTML=slice.map(t=>{
+      const {label,hint}=parseTopic(t);
+      return`<div class="ptopic-row" data-t="${esc(t)}">
+        <div class="pradio"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px">${esc(label)}</div>
+          ${hint?`<div style="font-size:10px;color:var(--t3);margin-top:1px">${esc(hint)}</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
     qEl.querySelectorAll('.ptopic-row').forEach(row=>{
       row.addEventListener('click',()=>{
         qEl.querySelectorAll('.ptopic-row').forEach(r=>r.classList.remove('sel'));
         row.classList.add('sel');
+        // store the raw topic (with hint) in the input so runSite gets the full value
         const inp=document.getElementById('pa-topic');if(inp)inp.value=row.dataset.t;
       });
     });
@@ -1333,14 +1364,17 @@ function openDayModal(day){
   const rows=dp.map(p=>{
     const idx=sI(p.siteId);const col=idx>=0?C(idx):'#9a9a92';
     const bc={scheduled:'b-sch',published:'b-pub',draft:'b-dra',failed:'b-fai'}[p.status]||'b-dra';
+    const tLabel=p.displayTopic||parseTopic(p.topic).label;
+    const tHint=parseTopic(p.topic).hint;
     return`<div class="day-row">
       <div style="font-size:11px;color:var(--t3);min-width:44px;flex-shrink:0">${f12(p.date.getHours(),p.date.getMinutes())}</div>
       <div class="sdot" style="background:${col};flex-shrink:0"></div>
       <div style="flex:1;min-width:0">
         ${p.title
           ? `<div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${esc(p.title)}</div>
-             <div style="font-size:10px;color:var(--t3);margin-top:1px">Topic: ${esc(p.topic)}</div>`
-          : `<div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${esc(p.topic)}</div>
+             <div style="font-size:10px;color:var(--t3);margin-top:1px">Topic: ${esc(tLabel)}${tHint?` · ${esc(tHint)}`:''}</div>`
+          : `<div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${esc(tLabel)}</div>
+             ${tHint?`<div style="font-size:10px;color:var(--t3);margin-top:1px">${esc(tHint)}</div>`:''}
              <div style="font-size:10px;font-style:italic;color:var(--t3);margin-top:1px">Title generated at publish</div>`
         }
         <div style="font-size:10px;color:var(--t3);margin-top:1px">${esc(S.sites[idx]?.name||'?')}</div>
