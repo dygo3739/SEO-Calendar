@@ -336,26 +336,137 @@ async function claude(prompt,maxTok=2800){
 }
 
 // ─── SITEMAP FETCHER ──────────────────────────────────────────────────
-// Fetches the sitemap XML and parses out all <loc> URLs.
-// Returns an array of URL strings. Caps at 150 to keep prompt size sane.
 async function fetchSitemapUrls(sitemapUrl,logFn){
   if(!sitemapUrl)return[];
-  try{
-    // Use a CORS proxy approach — fetch via no-cors won't give us body,
-    // so we attempt direct first (works when the site has CORS open),
-    // then fall back silently so publishing still succeeds.
-    const r=await fetch(sitemapUrl,{method:'GET',headers:{Accept:'application/xml,text/xml,*/*'}});
-    if(!r.ok)throw new Error(`Sitemap returned ${r.status}`);
-    const xml=await r.text();
-    // Parse all <loc> tags
-    const matches=[...xml.matchAll(/<loc>([\s\S]*?)<\/loc>/gi)];
-    const urls=matches.map(m=>m[1].trim()).filter(u=>u.startsWith('http')).slice(0,150);
-    if(logFn)logFn(`Sitemap: ${urls.length} URLs loaded`,'lok');
-    return urls;
-  }catch(e){
-    // Non-fatal — if sitemap can't be fetched (CORS etc) we continue without it
-    if(logFn)logFn(`Sitemap fetch skipped: ${e.message} — pillar pages still apply`,'lw');
-    return[];
+
+  // Try direct fetch first, then two CORS proxy fallbacks
+  const attempts=[
+    ()=>fetch(sitemapUrl,{method:'GET',headers:{Accept:'application/xml,text/xml,*/*'}}),
+    ()=>fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(sitemapUrl)}`),
+    ()=>fetch(`https://corsproxy.io/?${encodeURIComponent(sitemapUrl)}`),
+  ];
+
+  for(let i=0;i<attempts.length;i++){
+    try{
+      const r=await attempts[i]();
+      if(!r.ok)continue;
+      const xml=await r.text();
+      if(!xml.includes('<loc>'))continue; // not a sitemap
+      const matches=[...xml.matchAll(/<loc>([\s\S]*?)<\/loc>/gi)];
+      const urls=matches.map(m=>m[1].trim()).filter(u=>u.startsWith('http')).slice(0,150);
+      if(logFn)logFn(`Sitemap: ${urls.length} URLs loaded${i>0?` (via proxy ${i})`:''}`, 'lok');
+      return urls;
+    }catch(e){ continue; }
+  }
+
+  if(logFn)logFn('Sitemap fetch failed (CORS) — pillar pages still apply. To fix, add this to your .htaccess: Header set Access-Control-Allow-Origin "*"','lw');
+  return[];
+}
+
+// ─── AUTO-SCHEDULER ───────────────────────────────────────────────────
+// Checks every minute whether any site is due to run.
+// A site is due when: it has WP credentials, the current UTC hour:min matches
+// its schedule, and it hasn't already run today (UTC date).
+let _schedulerInterval=null;
+let _lastSchedulerCheck=null;
+let _nextScheduled=null;
+
+function startScheduler(){
+  if(_schedulerInterval)clearInterval(_schedulerInterval);
+  checkScheduler(); // check immediately on load
+  _schedulerInterval=setInterval(checkScheduler,60*1000); // then every minute
+}
+
+function checkScheduler(){
+  _lastSchedulerCheck=new Date();
+  const now=new Date();
+  const nowUTCHour=now.getUTCHours();
+  const nowUTCMin=now.getUTCMinutes();
+  const todayUTC=now.toISOString().slice(0,10); // YYYY-MM-DD
+
+  // Find sites due right now (within a 1-minute window of their scheduled time)
+  const due=S.sites.filter(site=>{
+    if(!site.wpUrl||!site.wpPass)return false; // no WP credentials
+    if(!S.anthropicKey||!S.unsplashKey)return false; // no API keys
+    const lastRun=site.last_run?new Date(site.last_run).toISOString().slice(0,10):null;
+    if(lastRun===todayUTC)return false; // already ran today
+    // Check freq — weekly/biweekly
+    if(site.freq==='weekly'){
+      const dayOfWeek=now.getUTCDay();
+      const scheduledDay=site.schedWeekday??1; // default Monday
+      if(dayOfWeek!==scheduledDay)return false;
+    }
+    if(site.freq==='biweekly'){
+      // run on the same weekday every 14 days from topic_idx 0 start
+      // simplification: run if week number from epoch is even/odd matches site id hash
+      const weekNum=Math.floor(now.getTime()/(7*24*60*60*1000));
+      if(weekNum%2!==parseInt(site.id.replace(/\D/g,'')[0]||0)%2)return false;
+    }
+    // Match schedule hour and minute within a 1-minute window
+    const schedMinTotal=site.schedHour*60+site.schedMin;
+    const nowMinTotal=nowUTCHour*60+nowUTCMin;
+    return nowMinTotal===schedMinTotal;
+  });
+
+  // Compute next scheduled site for display
+  _nextScheduled=getNextScheduled();
+  updateSchedulerBadge();
+
+  if(due.length===0)return;
+
+  // Auto-run each due site sequentially
+  (async()=>{
+    for(const site of due){
+      const logLines=[];
+      const logFn=(msg,type)=>logLines.push({msg,type});
+      try{
+        logFn(`Auto-run starting: ${site.name}`,'li');
+        const url=await runSite(site,logFn);
+        logFn(`Published: ${url}`,'lok');
+        toast(`${site.name} auto-published ✓`,'ok');
+      }catch(e){
+        logFn(`Failed: ${e.message}`,'le');
+        // Mark the post as failed in the schedule
+        const todayStr=new Date().toDateString();
+        const sched=S.posts.find(p=>p.siteId===site.id&&p.date.toDateString()===todayStr&&p.status==='scheduled');
+        if(sched)sched.status='failed';
+        save();
+        toast(`${site.name} auto-publish failed — check failed posts`,'err');
+      }
+      render();
+    }
+  })();
+}
+
+function getNextScheduled(){
+  const now=new Date();
+  const todayUTC=now.toISOString().slice(0,10);
+  const nowMinTotal=now.getUTCHours()*60+now.getUTCMinutes();
+
+  let soonest=null;
+  S.sites.forEach(site=>{
+    if(!site.wpUrl||!site.wpPass)return;
+    const lastRun=site.last_run?new Date(site.last_run).toISOString().slice(0,10):null;
+    if(lastRun===todayUTC)return; // already ran today
+    const schedMin=site.schedHour*60+site.schedMin;
+    const minsUntil=schedMin>nowMinTotal ? schedMin-nowMinTotal : (24*60-nowMinTotal)+schedMin;
+    if(!soonest||minsUntil<soonest.minsUntil)soonest={site,minsUntil,schedMin};
+  });
+  return soonest;
+}
+
+function updateSchedulerBadge(){
+  const el=document.getElementById('scheduler-badge');
+  if(!el)return;
+  if(!_nextScheduled){
+    el.textContent='All sites ran today';
+    el.style.color='var(--gtx)';
+  } else {
+    const h=Math.floor(_nextScheduled.minsUntil/60);
+    const m=_nextScheduled.minsUntil%60;
+    const timeStr=h>0?`${h}h ${m}m`:`${m}m`;
+    el.textContent=`Next: ${_nextScheduled.site.name} in ${timeStr}`;
+    el.style.color='var(--t3)';
   }
 }
 
@@ -649,7 +760,13 @@ async function runSite(site,logFn,overrideTopic=null){
 }
 
 // ─── RENDER ───────────────────────────────────────────────────────────
-function render(){document.getElementById('app').innerHTML=renderShell();attachHandlers();}
+function render(){
+  document.getElementById('app').innerHTML=renderShell();
+  attachHandlers();
+  // Refresh scheduler badge — gets wiped on each full re-render
+  _nextScheduled=getNextScheduled();
+  updateSchedulerBadge();
+}
 
 function renderShell(){
   const ok=S.anthropicKey&&S.unsplashKey;
@@ -716,6 +833,7 @@ function renderSB(){
       <div class="slbl">API run order</div>
       <div class="tlist">${timing}</div>
       ${overlap?`<div class="warn-pill">&#9888; ${overlap}</div>`:''}
+      <div id="scheduler-badge" style="font-size:10px;color:var(--t3);margin-top:6px;padding:0 2px">Scheduler starting…</div>
     </div>
     ${noKeys?`<div class="setup-banner">&#9432; Set your API keys to enable publishing.</div>`:''}
   </div>`;
@@ -1476,6 +1594,7 @@ function attachHandlers(){
 }
 
 render();
+startScheduler();
 </script>
 </body>
 </html>
