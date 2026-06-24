@@ -374,11 +374,15 @@ async function writeArticle(topic,site,logFn,sitemapUrls=[]){
     linkingBlock+='You may ONLY link to URLs from the two lists below. Do NOT invent, guess, or construct any URLs. If no URL from these lists fits naturally, do not add a link.\n\n';
 
     if(pillarPages.length){
-      linkingBlock+='PILLAR PAGES (highest priority — link to these first when relevant, using the exact anchor text specified):\n';
+      linkingBlock+='PILLAR PAGES (highest priority — link to these when relevant):\n';
+      linkingBlock+='For each pillar page you have a list of anchor variants. Choose whichever variant reads most naturally in context — do not always use the first one. Vary your choices across the article.\n\n';
       pillarPages.forEach(p=>{
-        linkingBlock+=`  Anchor: "${p.keyphrase}" → ${p.url}\n`;
+        // Support both new {anchors:[]} and legacy {keyphrase:""} formats
+        const anchors=p.anchors?.length ? p.anchors : (p.keyphrase ? [p.keyphrase] : []);
+        if(!anchors.length)return;
+        linkingBlock+=`  URL: ${p.url}\n`;
+        linkingBlock+=`  Anchor options (pick ONE that fits naturally): ${anchors.map(a=>`"${a}"`).join(' | ')}\n\n`;
       });
-      linkingBlock+='\n';
     }
 
     if(sitemapUrls.length){
@@ -895,18 +899,22 @@ async function fetchWPTags(site){
 }
 
 // ─── PILLAR PAGE HELPERS ──────────────────────────────────────────────
-// Simple render — no nested modals, no shared closures needed.
-// The live `pages` array lives entirely inside openSiteModal.
 function renderPillarRows(pages){
   if(!pages||!pages.length)return'';
-  return pages.map((p,i)=>`
-    <div class="pillar-row">
+  return pages.map((p,i)=>{
+    // anchors is an array; keyphrase is legacy single-string fallback
+    const anchors=p.anchors?.length ? p.anchors : (p.keyphrase ? [p.keyphrase] : []);
+    return`<div class="pillar-row">
       <div style="flex:1;min-width:0">
-        <div style="font-size:11px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.keyphrase||'(no keyphrase)')}</div>
-        <div style="font-size:10px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px">${esc(p.url||'(no url)')}</div>
+        <div style="font-size:11px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.url||'(no url)')}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
+          ${anchors.map(a=>`<span style="font-size:10px;padding:2px 7px;background:var(--abg);color:var(--atx);border-radius:20px;white-space:nowrap">${esc(a)}</span>`).join('')}
+          ${!anchors.length?'<span style="font-size:10px;color:var(--t3);font-style:italic">no anchors</span>':''}
+        </div>
       </div>
-      <button class="btn btn-g" style="padding:2px 8px;font-size:10px;flex-shrink:0" data-del-pillar="${i}">✕</button>
-    </div>`).join('');
+      <button class="btn btn-g" style="padding:2px 8px;font-size:10px;flex-shrink:0;align-self:flex-start" data-del-pillar="${i}">✕</button>
+    </div>`;
+  }).join('');
 }
 
 // ─── SITE MODAL ───────────────────────────────────────────────────────
@@ -1008,7 +1016,7 @@ function openSiteModal(siteId=null){
       </div>
       <div style="margin-top:16px">
         <div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:4px">Pillar pages</div>
-        <div class="fhint" style="margin-bottom:10px">Claude links to these using your exact keyphrase. Only links when it fits naturally.</div>
+        <div class="fhint" style="margin-bottom:10px">Claude picks from your anchor variants naturally — mixing exact, partial, and descriptive anchors builds topical authority without over-optimising.</div>
         <div id="s-pillars"></div>
         <div id="s-pillar-empty" style="font-size:12px;color:var(--t3);padding:10px 0;text-align:center;border:1px dashed var(--border);border-radius:var(--r);margin-bottom:10px">No pillar pages yet</div>
         <div style="border:1px solid var(--border);border-radius:var(--r);padding:12px;background:var(--gray)">
@@ -1018,9 +1026,9 @@ function openSiteModal(siteId=null){
             <input id="pp-url" placeholder="https://myblog.com/how-it-works">
           </div>
           <div class="field" style="margin-bottom:8px">
-            <label>Keyphrase (exact anchor text)</label>
-            <input id="pp-kp" placeholder="local business lead finder">
-            <div class="fhint">2-5 words. This is the exact text Claude uses as the link.</div>
+            <label>Anchor text variants <span style="font-weight:400;color:var(--t3)">(comma-separated)</span></label>
+            <input id="pp-kp" placeholder="find a CPA, hire an accountant, CPA search, connect with a CPA near you">
+            <div class="fhint">Add 3-6 variants — exact match, partial match, and natural phrase. Claude picks whichever fits best in context.</div>
           </div>
           <button class="btn btn-p" id="s-add-pillar" style="width:100%;justify-content:center">+ Add pillar page</button>
         </div>
@@ -1036,15 +1044,17 @@ function openSiteModal(siteId=null){
 
   // ── Pillar pages — self-contained, no nested modals ──
   const initPillars=()=>{
-    // Single live array — source of truth for the whole tab
-    let pages=(site?.pillarPages||[]).map(p=>({...p}));
+    // Normalise legacy entries: {keyphrase} → {anchors:[keyphrase]}
+    let pages=(site?.pillarPages||[]).map(p=>({
+      url: p.url||'',
+      anchors: p.anchors?.length ? p.anchors : (p.keyphrase ? [p.keyphrase] : []),
+    }));
 
     const refresh=()=>{
       const container=document.getElementById('s-pillars');
       const empty=document.getElementById('s-pillar-empty');
       if(container)container.innerHTML=renderPillarRows(pages);
       if(empty)empty.style.display=pages.length?'none':'block';
-      // Re-attach delete buttons after each render
       document.querySelectorAll('[data-del-pillar]').forEach(btn=>{
         btn.onclick=(e)=>{
           e.preventDefault();
@@ -1055,24 +1065,24 @@ function openSiteModal(siteId=null){
     };
     refresh();
 
-    // Add button — reads the inline form fields, pushes to array, clears fields
     document.getElementById('s-add-pillar').onclick=(e)=>{
       e.preventDefault();
       const urlEl=document.getElementById('pp-url');
       const kpEl=document.getElementById('pp-kp');
       const url=(urlEl?.value||'').trim();
-      const keyphrase=(kpEl?.value||'').trim();
+      const rawAnchors=(kpEl?.value||'').trim();
       if(!url){toast('URL is required','err');urlEl?.focus();return;}
-      if(!keyphrase){toast('Keyphrase is required','err');kpEl?.focus();return;}
-      pages.push({url,keyphrase});
+      if(!rawAnchors){toast('At least one anchor variant is required','err');kpEl?.focus();return;}
+      // Parse comma-separated anchors, strip blanks
+      const anchors=rawAnchors.split(',').map(a=>a.trim()).filter(Boolean);
+      if(!anchors.length){toast('Enter at least one anchor variant','err');kpEl?.focus();return;}
+      pages.push({url,anchors});
       if(urlEl)urlEl.value='';
       if(kpEl)kpEl.value='';
       refresh();
-      toast('Pillar page added','ok');
+      toast(`Pillar page added (${anchors.length} anchor${anchors.length!==1?'s':''})`, 'ok');
     };
 
-    // Expose pages to save handler via a getter on the container element
-    // Save handler calls getPillarPages() defined below
     window._pillarPages=pages;
   };
   initPillars();
