@@ -563,10 +563,12 @@ ARTICLE REQUIREMENTS:
 
 ${tagInstruction}
 
+JSON FORMATTING: The "content" field must be valid JSON string — escape all newlines as \\n and all double quotes inside HTML attributes as \\" if needed. Do not include literal line breaks inside any string value.
+
 Respond ONLY with valid JSON (no markdown fences):
 {"title":"<compelling headline>","content":"<full article HTML>","excerpt":"<standard WP excerpt, 1-2 sentences>","yoast_keyphrase":"<2-5 word focus keyphrase — the primary SEO term this article targets>","yoast_meta":"<meta description 120-158 chars — must include the focus keyphrase, be written to earn a click, no truncation>","tags":["single_tag"],"search_term":"<3-5 word Unsplash photo search>"}`,Math.max(2000,Math.round(wc*2.2)));
   const m=text.match(/\{[\s\S]*\}/);if(!m)throw new Error('Could not parse article JSON from Claude');
-  const parsed=JSON.parse(m[0]);
+  const parsed=parseClaudeJSON(m[0]);
   // Enforce single tag
   if(Array.isArray(parsed.tags))parsed.tags=parsed.tags.slice(0,1);
   // Enforce meta description character range — trim if over, warn if under
@@ -575,6 +577,46 @@ Respond ONLY with valid JSON (no markdown fences):
     if(parsed.yoast_meta.length<120)parsed.yoast_meta=parsed.yoast_meta.trim(); // keep as-is, just tidy
   }
   return parsed;
+}
+
+// ─── ROBUST JSON PARSER FOR CLAUDE RESPONSES ──────────────────────────
+// Claude occasionally emits raw control characters (literal newlines/tabs)
+// inside string values, which is invalid JSON even though it looks fine
+// visually. This sanitizes the raw text before parsing, with a second
+// pass that walks the string char-by-char as a last resort.
+function parseClaudeJSON(raw){
+  // Attempt 1 — parse as-is (covers the common case where it's already valid)
+  try{ return JSON.parse(raw); }catch(e){ /* fall through to sanitization */ }
+
+  // Attempt 2 — escape raw control characters that appear INSIDE string values.
+  // We walk the text tracking whether we're inside a quoted string, and only
+  // escape control chars (newline, tab, carriage return) while inside one.
+  let out='';
+  let inString=false;
+  let escaped=false;
+  for(let i=0;i<raw.length;i++){
+    const ch=raw[i];
+    if(escaped){ out+=ch; escaped=false; continue; }
+    if(ch==='\\'){ out+=ch; escaped=true; continue; }
+    if(ch==='"'){ inString=!inString; out+=ch; continue; }
+    if(inString){
+      if(ch==='\n'){ out+='\\n'; continue; }
+      if(ch==='\r'){ out+='\\r'; continue; }
+      if(ch==='\t'){ out+='\\t'; continue; }
+      // Strip any other stray control characters (0x00-0x1F) that aren't valid in JSON strings
+      if(ch.charCodeAt(0)<0x20){ continue; }
+    }
+    out+=ch;
+  }
+
+  try{ return JSON.parse(out); }catch(e){
+    // Attempt 3 — last resort: strip ALL control characters globally and retry
+    const stripped=out.replace(/[\u0000-\u001F]+/g,' ');
+    try{ return JSON.parse(stripped); }
+    catch(e2){
+      throw new Error(`Could not parse article JSON even after sanitization: ${e2.message}`);
+    }
+  }
 }
 
 // ─── UNSPLASH ─────────────────────────────────────────────────────────
@@ -1251,7 +1293,54 @@ function openSiteModal(siteId=null){
 
     window._pillarPages=pages;
   };
-  initPillars();
+  // ── Manual sitemap fallback ──
+  // initialise the live array from existing saved data FIRST, before attaching handlers
+  window._manualSitemapUrls=site?.manualSitemapUrls||[];
+
+  const saveManualBtn=document.getElementById('s-save-manual-sitemap');
+  if(saveManualBtn){
+    saveManualBtn.onclick=()=>{
+      const ta=document.getElementById('s-manual-sitemap');
+      const raw=ta?ta.value:'';
+      const urls=parseManualSitemapInput(raw);
+      window._manualSitemapUrls=urls;
+      const countEl=document.getElementById('s-manual-count');
+      if(countEl)countEl.textContent=`${urls.length} URLs saved`;
+      const res=document.getElementById('s-manual-sitemap-result');
+      if(res){
+        res.innerHTML=urls.length
+          ? `<div class="conn-row" style="border-color:#86efac;background:var(--gbg);color:var(--gtx)">✅ Parsed ${urls.length} URLs — click "Save changes" below to persist</div>`
+          : `<div class="conn-row" style="border-color:#fca5a5;background:var(--rbg);color:var(--rtx)">⚠ No valid URLs found — paste full sitemap XML or one URL per line</div>`;
+      }
+      toast(urls.length?`${urls.length} URLs ready — now click Save changes`:'No URLs found',urls.length?'ok':'err');
+    };
+  }
+
+  const testManualBtn=document.getElementById('s-test-manual-sitemap');
+  if(testManualBtn){
+    testManualBtn.onclick=async()=>{
+      const btn=document.getElementById('s-test-manual-sitemap');
+      const res=document.getElementById('s-manual-sitemap-result');
+      const urlInput=document.getElementById('s-sitemap');
+      const url=urlInput?urlInput.value.trim():'';
+      if(!url){if(res)res.innerHTML=`<div class="conn-row">⚠ Enter a sitemap URL above first</div>`;return;}
+      if(btn){btn.disabled=true;btn.textContent='Testing…';}
+      if(res)res.innerHTML='';
+      const testLog=(msg,type)=>{
+        if(res)res.innerHTML+=`<div style="font-size:11px;color:${type==='lok'?'var(--gtx)':type==='lw'?'var(--ytx)':'var(--t2)'};margin-top:3px">${esc(msg)}</div>`;
+      };
+      try{
+        const urls=await fetchSitemapUrls(url,testLog);
+        if(res){
+          if(urls.length)res.innerHTML+=`<div class="conn-row" style="border-color:#86efac;background:var(--gbg);color:var(--gtx);margin-top:6px">✅ Live fetch works — ${urls.length} URLs found</div>`;
+          else res.innerHTML+=`<div class="conn-row" style="border-color:#fca5a5;background:var(--rbg);color:var(--rtx);margin-top:6px">❌ Live fetch failed — the manual fallback list will be used instead</div>`;
+        }
+      }catch(e){
+        if(res)res.innerHTML+=`<div class="conn-row" style="border-color:#fca5a5;background:var(--rbg);color:var(--rtx);margin-top:6px">❌ Error: ${esc(e.message)}</div>`;
+      }
+      if(btn){btn.disabled=false;btn.textContent='Test live fetch now';}
+    };
+  }
 
   // ── Word count preset sync ──
   document.getElementById('s-wc-preset')?.addEventListener('change',e=>{
@@ -1353,6 +1442,7 @@ function openSiteModal(siteId=null){
       niche:document.getElementById('s-niche')?.value.trim()||'',
       usp:document.getElementById('s-usp')?.value.trim()||'',
       sitemapUrl:document.getElementById('s-sitemap')?.value.trim()||'',
+      manualSitemapUrls:window._manualSitemapUrls||(isEdit?site.manualSitemapUrls:[])||[],
       pillarPages,
     };
     if(isEdit){const idx=sI(siteId);S.sites[idx]={...site,...d};}
