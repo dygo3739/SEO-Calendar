@@ -335,6 +335,23 @@ async function claude(prompt,maxTok=2800){
   return(await r.json()).content[0].text.trim();
 }
 
+// ─── MANUAL SITEMAP PARSER ────────────────────────────────────────────
+// Accepts either raw XML (extracts <loc> tags) or a plain newline-separated
+// list of URLs. Returns a deduped array, capped at 150.
+function parseManualSitemapInput(raw){
+  if(!raw||!raw.trim())return[];
+  const text=raw.trim();
+  let urls=[];
+  if(text.includes('<loc>')){
+    const matches=[...text.matchAll(/<loc>([\s\S]*?)<\/loc>/gi)];
+    urls=matches.map(m=>m[1].trim());
+  }else{
+    urls=text.split('\n').map(l=>l.trim()).filter(Boolean);
+  }
+  urls=urls.filter(u=>u.startsWith('http'));
+  return[...new Set(urls)].slice(0,150);
+}
+
 // ─── SITEMAP FETCHER ──────────────────────────────────────────────────
 async function fetchSitemapUrls(sitemapUrl,logFn){
   if(!sitemapUrl)return[];
@@ -717,7 +734,8 @@ async function getOrCreateTags(site,tagNames){
 // ─── PIPELINE ─────────────────────────────────────────────────────────
 async function runSite(site,logFn,overrideTopic=null){
   if(!site.wpUrl||!site.wpUser||!site.wpPass)throw new Error('WordPress credentials missing — edit the site to add them.');
-  if(!S.unsplashKey)throw new Error('No Unsplash API key — click "Keys" in top bar.');
+  const wantsFeaturedImage=site.featuredImage!==false;
+  if(wantsFeaturedImage&&!S.unsplashKey)throw new Error('No Unsplash API key — click "Keys" in top bar, or turn off Featured Image for this site.');
   const topics=site.topics||[];if(!topics.length)throw new Error('No topics configured.');
   const idx=site.topic_idx||0;
   const topic=overrideTopic||topics[idx%topics.length];
@@ -729,21 +747,29 @@ async function runSite(site,logFn,overrideTopic=null){
     logFn('Fetching sitemap…','li');
     sitemapUrls=await fetchSitemapUrls(site.sitemapUrl,logFn);
   }
+  if(!sitemapUrls.length&&site.manualSitemapUrls?.length){
+    sitemapUrls=site.manualSitemapUrls;
+    logFn(`Using manual sitemap fallback: ${sitemapUrls.length} URLs`,'lok');
+  }
 
   logFn('Writing article via Claude…','li');
   const article=await writeArticle(topic,site,logFn,sitemapUrls);
   logFn(`Title: "${article.title}"`,'lok');
 
-  logFn(`Fetching photo for: ${article.search_term}`,'li');
   let mediaId=null;
-  try{
-    const photo=await fetchPhoto(article.search_term);
-    article._photo=photo;
-    logFn(`Photo: ${photo.photographer} / Unsplash`,'lok');
-    logFn('Uploading photo to WordPress…','li');
-    mediaId=await uploadPhoto(site,photo);
-    logFn('Featured image uploaded','lok');
-  }catch(e){logFn(`Photo skipped: ${e.message}`,'lw');}
+  if(wantsFeaturedImage){
+    logFn(`Fetching photo for: ${article.search_term}`,'li');
+    try{
+      const photo=await fetchPhoto(article.search_term);
+      article._photo=photo;
+      logFn(`Photo: ${photo.photographer} / Unsplash`,'lok');
+      logFn('Uploading photo to WordPress…','li');
+      mediaId=await uploadPhoto(site,photo);
+      logFn('Featured image uploaded','lok');
+    }catch(e){logFn(`Photo skipped: ${e.message}`,'lw');}
+  }else{
+    logFn('Featured image disabled for this site — skipping photo','li');
+  }
 
   logFn('Publishing to WordPress…','li');
   const post=await publishPost(site,article,mediaId,logFn);
@@ -1073,6 +1099,15 @@ function openSiteModal(siteId=null){
         <div class="field"><label>App password</label><input id="s-wpp" type="password" placeholder="${isEdit&&site?.wpPass?'••••••••':'xxxx xxxx xxxx'}" value="${esc(site?.wpPass||'')}"></div>
       </div>
       <div class="field"><label>WordPress category name</label><input id="s-cat" value="${esc(site?.category||'Blog')}"></div>
+      <div class="field" style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;margin-bottom:8px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+        <div>
+          <label style="margin-bottom:1px">Featured image</label>
+          <div class="fhint" style="margin-top:0">Fetch an Unsplash photo and set it as the post's featured image.</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0;margin-left:12px">
+          <input type="checkbox" id="s-featured-img" ${site?.featuredImage!==false?'checked':''} style="width:32px;height:18px;accent-color:var(--accent);cursor:pointer">
+        </label>
+      </div>
       <div class="fhint" style="margin-bottom:12px">Generate an app password at WP Admin → Users → Profile → Application Passwords. Use that, not your login password.</div>
       <div id="s-conn-result"></div>
       <button class="btn btn-g" id="s-test" style="width:100%;justify-content:center;margin-bottom:16px">&#10003; Test WordPress connection</button>
@@ -1130,7 +1165,20 @@ function openSiteModal(siteId=null){
       <div class="field">
         <label>Sitemap URL</label>
         <input id="s-sitemap" value="${esc(site?.sitemapUrl||'')}" placeholder="https://myblog.com/sitemap.xml">
-        <div class="fhint">Claude fetches this at publish time and only links to URLs actually found in it.</div>
+        <div class="fhint">Claude fetches this live at publish time. If fetching fails (CORS, hosting restrictions), the manual list below is used as a fallback.</div>
+      </div>
+      <div style="margin-top:14px;border:1px solid var(--border);border-radius:var(--r);padding:12px;background:var(--gray)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:11px;font-weight:600;color:var(--t2)">Manual sitemap fallback</div>
+          <span id="s-manual-count" style="font-size:10px;color:var(--t3)">${(site?.manualSitemapUrls||[]).length} URLs saved</span>
+        </div>
+        <div class="fhint" style="margin-bottom:8px">Paste your sitemap XML or a plain list of URLs (one per line). Used automatically whenever the live fetch fails. Update this periodically by re-pasting.</div>
+        <textarea id="s-manual-sitemap" style="font-size:11px;line-height:1.5;min-height:90px;font-family:var(--mono)" placeholder="https://myblog.com/page-one&#10;https://myblog.com/page-two&#10;...or paste full sitemap XML">${esc((site?.manualSitemapUrls||[]).join('\n'))}</textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-g" id="s-save-manual-sitemap" style="flex:1;justify-content:center">Save manual list</button>
+          <button class="btn btn-g" id="s-test-manual-sitemap" style="flex:1;justify-content:center">Test live fetch now</button>
+        </div>
+        <div id="s-manual-sitemap-result" style="margin-top:8px"></div>
       </div>
       <div style="margin-top:16px">
         <div style="font-size:11px;font-weight:600;color:var(--t2);margin-bottom:4px">Pillar pages</div>
@@ -1293,6 +1341,7 @@ function openSiteModal(siteId=null){
       wpUrl:document.getElementById('s-wp').value.trim(),wpUser:document.getElementById('s-wpu').value.trim()||'admin',
       wpPass:document.getElementById('s-wpp').value||(isEdit?site.wpPass:''),
       category:document.getElementById('s-cat').value.trim()||'Blog',
+      featuredImage:document.getElementById('s-featured-img')?.checked!==false,
       wpTagPool,allowedTagIds,
       freq:document.getElementById('s-freq').value,
       schedHour:parseInt(document.getElementById('s-h').value)||7,schedMin:parseInt(document.getElementById('s-m').value)||0,
